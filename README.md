@@ -1,1 +1,7 @@
 # room-twin
+
+This project provides an automated pipeline for generating clean 3D digital twins from indoor LiDAR scans. The system operates through the following flow:
+
+1. Room Scan (iOS Mobile Frontend): Leverages Apple's native RoomPlan SDK to perform a room scan, capturing parametric geometry alongside semantic data—such as 3D bounding boxes, object orientations, and spatial classifications (chair, table, sofa, etc.) stored in a serialized USDZ or JSON format.
+2. Asset Swapping & Scene Assembly (Python/FastAPI Backend): The scan data is uploaded to a lightweight backend, where a trimesh-based processing engine parses the spatial matrices, replaces generic RoomPlan bounding volumes with high-quality models from a modular .glb asset library, and merges them into a unified .glb digital twin.
+3. Viewing & Editing (React Native Frontend - Optional / Future Roadmap): Optionally, the generated digital twin can be sent back to the mobile app to view and interactively edit or adjust object transforms on-device using Three.js (React Three Fiber) before exporting the result via the native iOS share sheet. Note: These viewing and editing steps are optional and planned for implementation in later versions of the app.
