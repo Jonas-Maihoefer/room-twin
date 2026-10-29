@@ -1,7 +1,24 @@
-# room-twin
+# Room Twin
 
-This project provides an automated pipeline for generating clean 3D digital twins from indoor LiDAR scans. The system operates through the following flow:
+> **Status: Architektur noch offen.** Die Architektur muss mit dem **Betreuer** abgestimmt werden. Die hier beschriebenen Wege sind Alternativen, keine bereits beschlossenen Implementierungen.
 
-1. Room Scan (iOS Mobile Frontend): Leverages Apple's native RoomPlan SDK to perform a room scan, capturing parametric geometry alongside semantic data—such as 3D bounding boxes, object orientations, and spatial classifications (chair, table, sofa, etc.) stored in a serialized USDZ or JSON format.
-2. Asset Swapping & Scene Assembly (Python/FastAPI Backend): The scan data is uploaded to a lightweight backend, where a trimesh-based processing engine parses the spatial matrices, replaces generic RoomPlan bounding volumes with high-quality models from a modular .glb asset library, and merges them into a unified .glb digital twin.
-3. Viewing & Editing (React Native Frontend - Optional / Future Roadmap): Optionally, the generated digital twin can be sent back to the mobile app to view and interactively edit or adjust object transforms on-device using Three.js (React Three Fiber) before exporting the result via the native iOS share sheet. Note: These viewing and editing steps are optional and planned for implementation in later versions of the app.
+Room Twin untersucht, wie aus einem indoor-LiDAR-Raumscan ein weiterverarbeitbares 3D-Modell entsteht. Die Verarbeitung könnte erkannte Möbel anhand semantischer Raumdaten durch passende 3D-Assets ersetzen.
+
+## Zwei mögliche Architekturen
+
+| | Variante 1 | Variante 2 |
+|---|---|---|
+| Scanner | Bestehende iOS-Scanner-App | Eigene iOS-App mit Apple RoomPlan |
+| Datentransfer | Export und manueller Upload | Direkte Übertragung zum Backend |
+| Fokus | Verarbeitungspipeline möglichst früh entwickeln | Integriertes Nutzererlebnis |
+| Status | Offen | Offen |
+
+- [Architektur 1: Externe Scanner-App](docs/architecture/option-1-external-scanner.md)
+- [Architektur 2: Eigene iOS-App](docs/architecture/option-2-integrated-ios-app.md)
+- [Vergleich und Entscheidungspunkte](docs/architecture/decision.md)
+- [Handytests: Warum sie benötigt werden](docs/testing/handytests.md)
+- [Gesamte Dokumentationsübersicht](docs/README.md)
+
+## Nächster Schritt
+
+Ein [Handytest](docs/testing/handytests.md) prüft, ob Drittanbieter-Apps **kostenlos verwertbares RoomPlan-JSON** exportieren. Das [Testprotokoll liegt als PDF im Repository](test/architecture%20research/Room_Twin_Handytests_RoomPlan_JSON-1.pdf). Diese Ergebnisse unterstützen das Gespräch mit dem Betreuer; sie ersetzen die Entscheidung nicht.

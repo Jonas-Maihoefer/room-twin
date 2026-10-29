@@ -1,34 +1,35 @@
-## Mobile App
+# Technologieoptionen – noch nicht entschieden
 
-* **React Native (with Expo)**
-* **Why this choice was made:** It allows you to build the app without needing a local macOS machine for daily coding. It also keeps your syntax and logic aligned with standard web development principles while providing robust bridges to native device hardware.
+> **Korrektur:** Die ursprüngliche Fassung beschrieb React Native/Expo, FastAPI, trimesh und GLB als fest beschlossene Architektur. Tatsächlich sind dies **Kandidaten**. Die Auswahl erfolgt nach [Abstimmung mit dem Betreuer](decision.md).
 
+[Dokumentation](../README.md) · [Architektur 1](option-1-external-scanner.md) · [Architektur 2](option-2-integrated-ios-app.md) · [Handytests](../testing/handytests.md)
 
-* **Apple RoomPlan (via `expo-roomplan`)**
-* **Why this choice was made:** Apple's RoomPlan is proprietary and hardware-dependent; it requires native access to the iPhone's LiDAR sensor to parse parametric walls, surfaces, and furniture bounding boxes. This wrapper brings that capability smoothly into your React Native environment.
+## Datenerfassung und UI
 
+| Vorschlag | Möglicher Einsatz | Offene Fragen |
+|---|---|---|
+| Bestehende LiDAR-/RoomPlan-App | **Architektur 1** | JSON wirklich kostenlos, vollständig, wiederholbar? → [Handytests](../testing/handytests.md) |
+| Kleines Webtool oder CLI-Upload | Architektur 1 | Wie viel UI braucht ein MVP tatsächlich? |
+| React Native + Expo | **Architektur 2** | Eignung des nativen RoomPlan-Wrappers, Builds/Signing |
+| Apple RoomPlan über expo-roomplan | Architektur 2 | Native Exportdaten und SDK-Kompatibilität am iPhone testen |
+| Three.js / React Three Fiber | Optionale spätere Ergänzung | Aufwendiges Mobile-3D-Rendering und Editing erst nach MVP prüfen |
 
-* **Three.js via React Three Fiber (`@react-three/fiber` & `@react-three/drei`)**
-* **Why this choice was made:** It turns 3D manipulation into standard React state management. Once the room `.glb` file is downloaded, users can interactively move, rotate, scale, or edit objects using touch gestures, and re-export the modified scene entirely on-device.
+## Backend (beide Varianten)
 
+| Vorschlag | Nutzen | Status |
+|---|---|---|
+| Python | Datenparsing, Transformationen, Geometrie | Kandidat |
+| FastAPI | Upload und Ergebnisbereitstellung | Kandidat; für ersten lokalen Test nicht zwingend |
+| trimesh | 3D-Asset-Transformation, Szenenaufbau, GLB | Kandidat; konkrete Anforderungen zuerst testen |
+| Lokale GLB-Asset-Bibliothek | Erste Ersatzmöbel | Einfacher Start ohne Cloud-Storage |
+| Blender | Falls BLEND-Dateien zwingend nötig sind | Nicht beschlossen; eigener Verarbeitungsschritt möglich |
 
+## Datenformate
 
----
+- **Input:** idealerweise **semantisches RoomPlan-JSON**, optional **USDZ** als visuelle Referenz. Die tatsächlich verfügbare Struktur ist zunächst im [Handytest](../testing/handytests.md) zu prüfen.
+- **Intern:** möglichst ein einfaches eigenes Modell von Räumen, Oberflächen und Objekten mit Kategorien, IDs, Dimensionen und Transformationen.
+- **Output:** **GLB** als Kandidat für eine portable 3D-Datei; **BLEND** nur, falls es eine ausdrückliche Anforderung gibt.
 
-## Server
+Die alte Formulierung **„GLB ausschließlich“** trifft für eine Pipeline mit JSON- oder USDZ-Eingabe nicht zu. Ebenso sollte nicht angenommen werden, dass USDZ beliebig direkt in trimesh geladen oder als strukturiertes RoomPlan-JSON ersetzt werden kann.
 
-* **Python with FastAPI**
-* **Why this choice was made:** Python is the premier language for 3D math and geometry processing. FastAPI provides a lightning-fast, asynchronous endpoint structure to receive room scan uploads from the mobile app and return processed `.glb` files instantly without unnecessary overhead.
-
-
-* **`trimesh` (Python)**
-* **Why this choice was made:** By dropping `.blend` files, you completely eliminated the need to run heavy, unstable desktop software (like Blender) on your server. `trimesh` handles all server-side asset swapping, matrix transformations, and scene assembly purely through code, making the backend completely bulletproof and lightweight.
-
-
-
----
-
-## Shared Data Standard (Client & Server)
-
-* **glTF / Binary `.glb` (Exclusively)**
-* **Why this choice was made:** It is the universal language of modern real-time 3D web and mobile engines. Using `.glb` exclusively ensures instant loading times in Three.js, seamless server-side merging via `trimesh`, and effortless sharing via the iOS native system share sheet.
+[System-Flows](system-flow.md) · [Entscheidungsstand](decision.md)
