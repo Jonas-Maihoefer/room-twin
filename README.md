@@ -1,24 +1,36 @@
 # Room Twin
 
-> **Status: Architektur noch offen.** Die Architektur muss mit dem **Betreuer** abgestimmt werden. Die hier beschriebenen Wege sind Alternativen, keine bereits beschlossenen Implementierungen.
+Room Twin entwickelt aus LiDAR-Raumscans weiterverarbeitbare 3D-Raummodelle. Die erkannten Räume und Einrichtungsgegenstände werden aufbereitet und erkannte Möbel durch passende 3D-Assets ersetzt.
 
-Room Twin untersucht, wie aus einem indoor-LiDAR-Raumscan ein weiterverarbeitbares 3D-Modell entsteht. Die Verarbeitung könnte erkannte Möbel anhand semantischer Raumdaten durch passende 3D-Assets ersetzen.
+## Verbindliche Architektur
 
-## Zwei mögliche Architekturen
+**Room Twin wird als eigene iOS-App mit Apples RoomPlan-SDK umgesetzt.** Der Scan findet direkt in der App statt. Die App überträgt die strukturierten Scan-Daten über eine API an das Backend. Dort werden Raumgeometrie und Objekte verarbeitet, 3D-Assets platziert und ein 3D-Modell erzeugt. Die App stellt das Ergebnis zum Herunterladen und Teilen bereit.
 
-| | Variante 1 | Variante 2 |
-|---|---|---|
-| Scanner | Bestehende iOS-Scanner-App | Eigene iOS-App mit Apple RoomPlan |
-| Datentransfer | Export und manueller Upload | Direkte Übertragung zum Backend |
-| Fokus | Verarbeitungspipeline möglichst früh entwickeln | Integriertes Nutzererlebnis |
-| Status | Offen | Offen |
+```mermaid
+flowchart LR
+    A[Room-Twin-iOS-App mit RoomPlan] --> B[Direkter API-Upload]
+    B --> C[Backend: Geometrie und Asset-Verarbeitung]
+    C --> D[3D-Modell als GLB]
+    D --> E[Download und Teilen in der App]
+```
 
-- [Architektur 1: Externe Scanner-App](docs/architecture/option-1-external-scanner.md)
-- [Architektur 2: Eigene iOS-App](docs/architecture/option-2-integrated-ios-app.md)
-- [Vergleich und Entscheidungspunkte](docs/architecture/decision.md)
-- [Handytests: Warum sie benötigt werden](docs/testing/handytests.md)
-- [Gesamte Dokumentationsübersicht](docs/README.md)
+## MVP-Ziel
 
-## Nächster Schritt
+1. Scan über RoomPlan in der eigenen iOS-App auf einem unterstützten LiDAR-Gerät durchführen.
+2. Semantische Raum- und Objektdaten mitsamt Abmessungen und Transformationen für die API aufbereiten und direkt übertragen.
+3. Im Backend mindestens ein erkanntes Objekt durch ein passendes, korrekt skaliertes und positioniertes 3D-Asset ersetzen.
+4. Das generierte Modell als GLB an die App zurückgeben und dort zum Herunterladen/Teilen anbieten.
 
-Ein [Handytest](docs/testing/handytests.md) prüft, ob Drittanbieter-Apps **kostenlos verwertbares RoomPlan-JSON** exportieren. Das [Testprotokoll liegt als PDF im Repository](test/architecture%20research/Room_Twin_Handytests_RoomPlan_JSON-1.pdf). Diese Ergebnisse unterstützen das Gespräch mit dem Betreuer; sie ersetzen die Entscheidung nicht.
+Ein integrierter 3D-Viewer oder Editor ist eine spätere Erweiterung und **keine Voraussetzung für den MVP**.
+
+## Projektstand
+
+Die Architektur ist **entschieden und dokumentiert**. Das Repository enthält bisher Dokumentation, noch keine lauffähige iOS-App oder Backend-Pipeline. Konkrete Frameworks und Bibliotheken sind teilweise noch zu validieren; die Systemarchitektur selbst steht fest.
+
+## Dokumentation
+
+- [Systemarchitektur und MVP-Grenzen](docs/architecture/architecture.md)
+- [Systemablauf und Datenfluss](docs/architecture/system-flow.md)
+- [Technikstack: verbindliche Vorgaben und Implementierungsdetails](docs/architecture/tech-stack.md)
+- [RoomPlan-iOS- und Ende-zu-Ende-Testplan](docs/testing/ios-roomplan-validation.md)
+- [Dokumentationsübersicht](docs/README.md)

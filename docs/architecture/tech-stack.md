@@ -1,35 +1,40 @@
-# Technologieoptionen – noch nicht entschieden
+# Technikstack – Room Twin
 
-> **Korrektur:** Die ursprüngliche Fassung beschrieb React Native/Expo, FastAPI, trimesh und GLB als fest beschlossene Architektur. Tatsächlich sind dies **Kandidaten**. Die Auswahl erfolgt nach [Abstimmung mit dem Betreuer](decision.md).
+**Die Systemarchitektur ist festgelegt:** eigene iOS-App, Apple RoomPlan zur Erfassung, direkter Upload an ein Backend zur Geometrie- und Asset-Verarbeitung sowie GLB als MVP-Ergebnis. Nicht alle konkreten Frameworks und Bibliotheken sind schon technisch validiert.
 
-[Dokumentation](../README.md) · [Architektur 1](option-1-external-scanner.md) · [Architektur 2](option-2-integrated-ios-app.md) · [Handytests](../testing/handytests.md)
+[Systemarchitektur](architecture.md) · [Systemablauf](system-flow.md) · [Testplan](../testing/ios-roomplan-validation.md)
 
-## Datenerfassung und UI
+## Verbindliche technische Vorgaben
 
-| Vorschlag | Möglicher Einsatz | Offene Fragen |
+| Bereich | Festlegung |
+|---|---|
+| Client | **Eigene iOS-App** mit integrierter Scanfunktion |
+| Erfassung | **Apple RoomPlan-SDK**, native iOS-Anbindung und kompatibles LiDAR-Gerät |
+| Datentransfer | **Direkter API-Upload aus der App** mit semantischen Raum- und Objektdaten |
+| Verarbeitung | Backend-Pipeline für Geometrie, Ersatz-Assets und 3D-Szene |
+| MVP-Ergebnis | **GLB**, abruf- und teilbar über die App |
+| Weiterer Ausbau | In-App-Viewer und -Editor erst nach dem MVP |
+
+## Geplante, noch zu validierende Umsetzungstechnologien
+
+| Bereich | Ausgangspunkt | Zu prüfen |
 |---|---|---|
-| Bestehende LiDAR-/RoomPlan-App | **Architektur 1** | JSON wirklich kostenlos, vollständig, wiederholbar? → [Handytests](../testing/handytests.md) |
-| Kleines Webtool oder CLI-Upload | Architektur 1 | Wie viel UI braucht ein MVP tatsächlich? |
-| React Native + Expo | **Architektur 2** | Eignung des nativen RoomPlan-Wrappers, Builds/Signing |
-| Apple RoomPlan über expo-roomplan | Architektur 2 | Native Exportdaten und SDK-Kompatibilität am iPhone testen |
-| Three.js / React Three Fiber | Optionale spätere Ergänzung | Aufwendiges Mobile-3D-Rendering und Editing erst nach MVP prüfen |
+| App-Oberfläche | React Native + Expo | Native Module, Build-Workflow und iOS-Kompatibilität |
+| RoomPlan-Anbindung | Native Swift-Bridge bzw. geeigneter Wrapper, etwa `expo-roomplan` | SDK-Abdeckung, Kompatibilität und Funktionsfähigkeit auf echtem Gerät |
+| Backend-Sprache | Python | Datentransformationen und Geometriebearbeitung |
+| Backend-API | FastAPI | Validierter Upload, Status, Fehler und Ergebnisabruf |
+| 3D-Verarbeitung | trimesh, ggf. ergänzende Werkzeuge | Transformationen, Modellimport, Szenenaufbau und stabiler GLB-Export |
+| Ersatzmodelle | Lokale GLB-Asset-Bibliothek | Kategorien, Skalierung, Lizenzen und Laufzeit |
 
-## Backend (beide Varianten)
-
-| Vorschlag | Nutzen | Status |
-|---|---|---|
-| Python | Datenparsing, Transformationen, Geometrie | Kandidat |
-| FastAPI | Upload und Ergebnisbereitstellung | Kandidat; für ersten lokalen Test nicht zwingend |
-| trimesh | 3D-Asset-Transformation, Szenenaufbau, GLB | Kandidat; konkrete Anforderungen zuerst testen |
-| Lokale GLB-Asset-Bibliothek | Erste Ersatzmöbel | Einfacher Start ohne Cloud-Storage |
-| Blender | Falls BLEND-Dateien zwingend nötig sind | Nicht beschlossen; eigener Verarbeitungsschritt möglich |
+Diese Kandidaten sind **Implementierungsentscheidungen innerhalb der beschlossenen Architektur**, keine zur Wahl stehenden Systemvarianten. Insbesondere darf die bloße Verfügbarkeit eines RoomPlan-Wrappers nicht als erfolgreich nachgewiesene Gerätekompatibilität gelten.
 
 ## Datenformate
 
-- **Input:** idealerweise **semantisches RoomPlan-JSON**, optional **USDZ** als visuelle Referenz. Die tatsächlich verfügbare Struktur ist zunächst im [Handytest](../testing/handytests.md) zu prüfen.
-- **Intern:** möglichst ein einfaches eigenes Modell von Räumen, Oberflächen und Objekten mit Kategorien, IDs, Dimensionen und Transformationen.
-- **Output:** **GLB** als Kandidat für eine portable 3D-Datei; **BLEND** nur, falls es eine ausdrückliche Anforderung gibt.
+- **Erfassung:** strukturierte RoomPlan-Ergebnisse. Die App mappt diese in ein mit dem Backend abgestimmtes, versioniertes API-Format.
+- **Interne Verarbeitung:** Räume, Oberflächen, Öffnungen und Objekte mit Kategorien, IDs, Dimensionen und Transformationen.
+- **MVP-Ausgabe:** GLB als transportierbare 3D-Szene.
+- **Weitere Formate:** nur auf gesonderte Anforderung; etwa BLEND könnte eine zusätzliche Verarbeitung erfordern.
 
-Die alte Formulierung **„GLB ausschließlich“** trifft für eine Pipeline mit JSON- oder USDZ-Eingabe nicht zu. Ebenso sollte nicht angenommen werden, dass USDZ beliebig direkt in trimesh geladen oder als strukturiertes RoomPlan-JSON ersetzt werden kann.
+## Entwicklungsumgebung
 
-[System-Flows](system-flow.md) · [Entscheidungsstand](decision.md)
+RoomPlan muss auf unterstützter Apple-Hardware erprobt werden. Bei Expo ist für native Module ein eigener **Development Build** nötig; Expo Go allein genügt nicht. Der Geräte-Build und sein Signing sind früh nachzuweisen. Die reale End-to-End-Pipeline wird anhand des [Testplans](../testing/ios-roomplan-validation.md) geprüft.

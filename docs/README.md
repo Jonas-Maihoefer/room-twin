@@ -1,18 +1,17 @@
 # Dokumentationsübersicht – Room Twin
 
-**Architekturstatus: OFFEN.** Die Entscheidung zwischen den Varianten ist noch nicht gefallen und muss mit dem Betreuer besprochen werden.
+**Architekturstatus: entschieden.** Room Twin wird als **eigene iOS-App mit Apples RoomPlan-SDK und direkter Backend-Anbindung** umgesetzt. Offene Fragen zu einzelnen Bibliotheken oder Schnittstellendetails ändern diese Festlegung nicht.
 
-## Architektur und Entscheidung
+## Architektur
 
-1. [Architekturvergleich und offene Fragen](architecture/decision.md)
-2. [Architektur 1: Externe Scanner-App + Pipeline](architecture/option-1-external-scanner.md)
-3. [Architektur 2: Eigene integrierte iOS-App](architecture/option-2-integrated-ios-app.md)
-4. [Getrennte Systemabläufe](architecture/system-flow.md)
-5. [Mögliche Technologien – nicht festgelegt](architecture/tech-stack.md)
+1. [Verbindliche Systemarchitektur](architecture/architecture.md) – Komponenten, Verantwortlichkeiten, MVP-Umfang und Integrationsgrenzen.
+2. [Systemablauf](architecture/system-flow.md) – ein Datenfluss vom Raumscan zum Modell in der App.
+3. [Technikstack](architecture/tech-stack.md) – feste Anforderungen und zu validierende Implementierungstechnologien.
 
-## Test und Evidenz
+## Verifikation
 
-- [Handytests: Ziel, Durchführung und Auswertung](testing/handytests.md)
-- [PDF-Testprotokoll im Repository](../test/architecture%20research/Room_Twin_Handytests_RoomPlan_JSON-1.pdf)
+- [iOS-/RoomPlan-Integration und Ende-zu-Ende-Tests](testing/ios-roomplan-validation.md) – Nachweis der realen Scan-zu-Modell-Pipeline auf einem unterstützten Gerät.
 
-Die tatsächlichen JSON-Dateien der Apps wurden bislang nicht im Projekt ausgewertet. Herstellerangaben über kostenlosen Export sind **keine bestätigten Testergebnisse**. Das PDF ist eine Testanleitung, kein Testbericht.
+## Aktueller Stand
+
+Dieses Repository enthält noch keine Implementierung von App oder Backend. Die beschriebenen Abläufe und Testfälle sind **Zielzustand bzw. Testplan**, nicht schon erfolgreich getestete Funktionen.
