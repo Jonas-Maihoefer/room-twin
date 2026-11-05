@@ -1,37 +1,35 @@
-# System-Flows – zwei getrennte Alternativen
+# Systemablauf – Room Twin
 
-**Architekturentscheidung noch offen.** Die folgenden Flows sind Vorschläge, keine freigegebene Architektur. [Entscheidungsstand](decision.md) · [Dokumentationsübersicht](../README.md)
+**Verbindlicher Ablauf:** Die eigene iOS-App erfasst Räume mit Apple RoomPlan, überträgt strukturierte Scandaten direkt an das Backend und macht das daraus generierte 3D-Modell verfügbar.
 
-## Architektur 1 – Externe Scanner-App
+[Systemarchitektur](architecture.md) · [Dokumentationsübersicht](../README.md)
 
-[Ausführliche Beschreibung](option-1-external-scanner.md)
-
-```mermaid
-flowchart TD
- A[Vorhandene iOS-Scanner-App] --> B[Export JSON / optional USDZ]
- B --> C[Manueller Upload / Import]
- C --> D[Backend / Geometrieverarbeitung]
- E[Asset-Bibliothek] --> D
- D --> F[GLB oder andere abgestimmte Ausgabe]
- F --> G[Download / Speicherung]
-```
-
-**Offene Voraussetzung:** Ist der JSON-Export wirklich kostenlos und für die Pipeline brauchbar? Siehe [Handytests](../testing/handytests.md) und [PDF](../../test/architecture%20research/Room_Twin_Handytests_RoomPlan_JSON-1.pdf).
-
-## Architektur 2 – Eigene integrierte App
-
-[Ausführliche Beschreibung](option-2-integrated-ios-app.md)
+## Scan bis Ergebnis
 
 ```mermaid
 flowchart TD
- A[Eigene iOS-App mit RoomPlan] --> B[Direkte Übertragung der Scan-Daten]
- B --> C[Backend / Geometrieverarbeitung]
- D[Asset-Bibliothek] --> C
- C --> E[3D-Modell]
- E --> F[In-App Download / Teilen]
- E -. optional später .-> G[3D-Viewer und Editor]
+    A[Eigene iOS-App: Scan starten] --> B[Apple RoomPlan: Raum und Objekte erfassen]
+    B --> C[App: Daten für Backend-API aufbereiten]
+    C --> D[Direkter, abgesicherter Upload]
+    D --> E[Backend: Eingabe und Geometrie validieren]
+    F[3D-Asset-Bibliothek] --> G[Assets zuordnen, skalieren und platzieren]
+    E --> G
+    G --> H[3D-Szene als GLB generieren]
+    H --> I[App: Modell abrufen, herunterladen oder teilen]
+    D -. Übertragungsfehler .-> J[App: verständliche Fehlermeldung]
+    E -. Ungültige Daten .-> J
 ```
 
-**Offene Voraussetzung:** Kompatibler native RoomPlan-Build, Signierung und Datentransfer müssen auf einem echten Gerät geprüft werden.
+## Verantwortlichkeiten
 
-Beide Varianten können eine gemeinsame Verarbeitungspipeline verwenden; der [Technologiestack ist noch nicht festgelegt](tech-stack.md).
+- **iOS-App:** Native RoomPlan-Erfassung, Scan-Aufbereitung, direkter API-Aufruf, Anzeige des Verarbeitungsstatus und Bereitstellung des Ergebnisses.
+- **Backend:** Datenvalidierung, Geometrie- und Transformationslogik, Asset-Zuordnung und GLB-Generierung.
+- **Asset-Bibliothek:** Geeignete Ersatzmodelle; für den MVP ist eine lokale Bibliothek ausreichend.
+
+Das konkrete API-Schema und das Verhalten bei asynchroner Verarbeitung müssen vor der Integration spezifiziert werden. Das Diagramm beschreibt die **festgelegte logische Architektur**, noch keine implementierte Pipeline.
+
+## Späterer Ausbau
+
+Nach dem MVP kann die App um einen 3D-Viewer und gegebenenfalls einen Editor erweitert werden. Diese Erweiterungen sind **nicht Bestandteil des ersten MVP**.
+
+[Technikstack](tech-stack.md) · [Tests](../testing/ios-roomplan-validation.md)
