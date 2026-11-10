@@ -28,11 +28,12 @@ In a second PowerShell window, run the API directly:
 ```powershell
 cd backend
 py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+.\\.venv\\Scripts\\python.exe -m pip install --upgrade pip
+.\\.venv\\Scripts\\python.exe -m pip install -e ".[dev]"
+.\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+
+These commands call the virtual environment's Python directly, so PowerShell script activation is unnecessary and its execution policy does not block setup.
 
 Check `http://127.0.0.1:8000/health`. To use Docker Desktop/WSL2 instead, from the repository root run `docker compose up --build`; stop with `Ctrl+C`, or `docker compose down` in another terminal. The stub accepts a synthetic versioned envelope at `POST /scans`; it does not persist data or produce a model.
 
