@@ -57,6 +57,48 @@ npx expo export --platform ios
 
 This browser workflow requires no iPhone, Mac, Xcode, Expo account, Apple Developer account, or EAS compilation.
 
+### Flowchart of the development infrastructure
+```mermaid
+flowchart TD
+    subgraph DEV["Windows Development PC"]
+        VS["VS Code + Git"]
+        TS["TypeScript + React Native"]
+        EXPO["Expo SDK 53"]
+        METRO["Metro Bundler"]
+    end
+
+    subgraph WEB["Web Development - Setup Required"]
+        RNW["React Native Web"]
+        BROWSER["Browser: Firefox / Chrome"]
+        MOCK["Mock RoomPlan Data / JSON Fixtures"]
+    end
+
+    subgraph BACKEND["Local Backend - Already Available"]
+        API["Python 3.11+ / FastAPI"]
+        UV["Uvicorn"]
+        LOGIC["Geometry + Furniture Replacement"]
+        ASSETS["3D Furniture Asset Library"]
+        GLB["GLB Generation"]
+    end
+
+    VS --> TS
+    TS --> EXPO
+    EXPO --> METRO
+    METRO -.->|"Web support to be added"| RNW
+    RNW --> BROWSER
+    MOCK -->|"Simulate room scans"| BROWSER
+
+    BROWSER -.->|"HTTP / JSON API"| UV
+    UV --> API
+    API -.-> LOGIC
+    ASSETS -.-> LOGIC
+    LOGIC -.-> GLB
+    GLB -.->|"Download result"| BROWSER
+
+    classDef planned stroke-dasharray: 5 5,stroke:#B68A38
+    class RNW,BROWSER,MOCK,LOGIC,ASSETS,GLB planned
+```
+
 ## Workflow 2: Real iOS development
 
 ### When a cloud build is needed
