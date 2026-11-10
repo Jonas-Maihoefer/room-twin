@@ -7,7 +7,7 @@ Room Twin has two separate development workflows. The browser workflow needs no 
 ### Requirements
 
 - Windows 11, PowerShell 7, Git, Node.js 22.14 or newer in the 22.x line, and npm.
-- Python 3.11+ with the `py` launcher, or Docker Desktop using WSL2.
+- Python 3.11+ with the `py` launcher
 
 ### Install and run the browser app
 
@@ -26,13 +26,7 @@ The UI, status handling, and JSON inspection are shared with iOS. Platform-speci
 
 ### Start the FastAPI backend
 
-In another PowerShell window at the repository root, use either Docker:
-
-```powershell
-docker compose up --build
-```
-
-Or run Python directly:
+In another PowerShell window at the repository root, use run Python directly:
 
 ```powershell
 cd backend
@@ -42,7 +36,7 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The commands call the virtual environment Python directly, so PowerShell activation is unnecessary. Open `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/docs`. The example browser API URL is `http://127.0.0.1:8000`; the current API stub does not yet upload or persist the displayed scan, replace furniture, or generate GLB files. Stop services with `Ctrl+C`; use `docker compose down` if containers remain.
+The commands call the virtual environment Python directly, so PowerShell activation is unnecessary. Open `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/docs`. The example browser API URL is `http://127.0.0.1:8000`; the current API stub does not yet upload or persist the displayed scan, replace furniture, or generate GLB files. Stop services with `Ctrl+C`.
 
 ### Tests and debugging
 
