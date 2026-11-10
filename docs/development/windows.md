@@ -1,81 +1,127 @@
 # Windows development
 
-## Prerequisites
+Room Twin has two separate development workflows. The browser workflow needs no Apple hardware, Mac, Xcode, Apple signing, or EAS build. Use the iOS workflow only when native RoomPlan behavior is ready to validate on a LiDAR device.
 
-- Windows 11 (Windows 10 also works with supported Docker Desktop versions), PowerShell 7, Git.
-- Node.js 20 LTS and npm 10+.
-- Python 3.11 or newer, with the Python launcher `py` available.
-- Docker Desktop using the WSL2 backend for the container workflow. Docker is optional when running Uvicorn directly.
-- An Expo account, Apple Developer Program membership, and a physical RoomPlan-compatible LiDAR iPhone/iPad for native verification.
+## Workflow 1: Windows browser development
 
-The ordinary edit/Metro loop runs on Windows. EAS compiles and signs the iOS app in the cloud; local macOS, Xcode, CocoaPods, and `expo run:ios` are not part of that loop.
+### Requirements
 
-## Get the repository running
+- Windows 11, PowerShell 7, Git, Node.js 22.14 or newer in the 22.x line, and npm.
+- Python 3.11+ with the `py` launcher
 
-From the repository root in PowerShell:
+### Install and run the browser app
+
+From the repository root:
 
 ```powershell
 cd apps/mobile
 npm ci
 Copy-Item .env.example .env
-npm run start
+npm run web
 ```
 
-The checked-in example points at `192.168.1.10`; set `EXPO_PUBLIC_API_BASE_URL` in `apps/mobile/.env` to the Windows host's actual LAN IPv4 address if you use the local backend. Expo public variables are bundled into the app and must not contain secrets.
+Expo opens the React Native Web app in the browser. Hot reload works for shared React Native UI. The platform-resolved web scanner is a mock: start, finish, cancel, and use **Simulate scan failure**. A finished mock scan displays and validates a RoomPlan-like JSON fixture. Its metadata says `source: room-twin-web-mock` and `authenticAppleRoomPlan: false`; it is synthetic test data, never a device capture. **Download JSON** uses a browser Blob download rather than Expo's native file system or share sheet.
 
-In a second PowerShell window, run the API directly:
+The UI, status handling, and JSON inspection are shared with iOS. Platform-specific files isolate the browser mock from `expo-roomplan` and isolate native file and share APIs from web bundling.
+
+### Start the FastAPI backend
+
+In another PowerShell window at the repository root, use run Python directly:
 
 ```powershell
 cd backend
 py -3 -m venv .venv
-.\\.venv\\Scripts\\python.exe -m pip install --upgrade pip
-.\\.venv\\Scripts\\python.exe -m pip install -e ".[dev]"
-.\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-These commands call the virtual environment's Python directly, so PowerShell script activation is unnecessary and its execution policy does not block setup.
+The commands call the virtual environment Python directly, so PowerShell activation is unnecessary. Open `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/docs`. The example browser API URL is `http://127.0.0.1:8000`; the current API stub does not yet upload or persist the displayed scan, replace furniture, or generate GLB files. Stop services with `Ctrl+C`.
 
-Check `http://127.0.0.1:8000/health`. To use Docker Desktop/WSL2 instead, from the repository root run `docker compose up --build`; stop with `Ctrl+C`, or `docker compose down` in another terminal. The stub accepts a synthetic versioned envelope at `POST /scans`; it does not persist data or produce a model.
-
-Run the backend suite in its reproducible test image with `docker compose --profile checks run --build --rm tests`.
-
-## Build and install the iOS development client
+### Tests and debugging
 
 From `apps/mobile`:
 
 ```powershell
-npm install --global eas-cli
-eas login
-eas whoami
-eas build:configure
-eas build --platform ios --profile development
+npm run lint
+npm run typecheck
+npm test -- --ci
+npx expo-doctor
+npx expo install --check
+npx expo config --type prebuild
+npx expo export --platform web
+npx expo export --platform ios
 ```
 
-The committed `eas.json` sets an internal-distribution development client and `simulator: false`, so the target is a physical device. On the first build, EAS prompts to connect the project to an Expo account and to configure iOS credentials. Use the available Apple Developer team; allow EAS to create/manage development signing credentials, or provide credentials through EAS credentials management. Do not place certificates, private keys, provisioning profiles, or EAS tokens in the repository.
+`expo export --platform ios` checks JavaScript bundling only; it does not compile the native iOS app. Use browser DevTools for web layout and console errors, Metro output for module resolution, and React Native Testing Library/Jest for shared workflow changes. From `backend`, run `.\.venv\Scripts\python.exe -m pytest`; or from the repository root run `docker compose --profile checks run --build --rm tests`.
 
-Register the test iPhone/iPad UDID with the Apple Developer team and EAS when prompted. For a new device after provisioning, register it and rebuild so the updated provisioning profile includes it. Open the EAS build link on the device and install the development build. Trust the developer profile under iOS Settings if prompted.
+This browser workflow requires no iPhone, Mac, Xcode, Expo account, Apple Developer account, or EAS compilation.
 
-After installation, connect the phone and development computer to the same trusted Wi-Fi network, run `npm run start`, and open the project from the Room Twin development client. If discovery fails, run `npx expo start --dev-client --lan`; check that Windows Firewall permits Node/Expo traffic on the private LAN. `localhost` on the phone means the phone itself, not the PC. Use the PC's LAN IPv4 address for the API, or a secured tunnel for networks where direct LAN access is unavailable. Do not expose an unauthenticated API to the public internet.
+## Workflow 2: Real iOS development
 
-## Scan verification and iteration
+### When a cloud build is needed
 
-The native RoomPlan bridge requires the EAS development build; Expo Go does not include it. The `expo-roomplan` 1.2.1 podspec requires iOS 17 or newer. Test on a physical device with LiDAR. Grant camera access, start and finish a scan, then verify the JSON is displayed and can be shared. Record device model, iOS version, build URL, export outcome, and representative structure fields without committing room captures or personal room images. Confirm dimensions, categories, transforms, surfaces, and openings are represented in the export before defining a Room Twin conversion.
+An EAS iOS build is needed to create the signed native development client that contains `expo-roomplan`. Expo Go cannot load this native module. You do not need a new build for ordinary TypeScript, JavaScript, styles, or web-only changes; Metro Fast Refresh updates those. Rebuild after changing native dependencies, config plugins, deployment target, bundle identifier, native permissions, or other generated iOS project settings.
 
-JavaScript and styles use Metro Fast Refresh. Changes to Expo config, native dependencies, config plugins, bundle settings, or iOS permissions require a new EAS development build. Windows supports the ordinary workflow; macOS/Xcode becomes useful if the wrapper needs native Swift debugging, unsupported native project changes, simulator-only diagnosis, or local iOS compilation.
+Room Twin's build profile targets physical devices (`simulator: false`) and uses an internal development client distribution. EAS performs the iOS compilation remotely, so initiating the build from Windows is supported. No cloud build is part of the browser workflow.
+
+### Bundle identifier and signing
+
+The app uses the fixed identifier `com.jonasmaihoefer.roomtwin` in local Expo configuration and every EAS profile. This value is deterministic and does not depend on a Windows PowerShell variable being copied to EAS. It is a project setting, **not a claim that the identifier is available or registered with Apple**. Before the first EAS build, check the Apple Developer account for this exact explicit App ID. If it is unavailable, change the single value in `apps/mobile/app.config.js`, then commit and push that change before building; do not override it with a local-only environment variable. Sign into the correct Expo account and let EAS create or use the Apple development certificate and provisioning profile for the chosen team. Never commit Apple credentials, certificates, private keys, provisioning profiles, or EAS tokens.
+
+### Scan session lifecycle
+
+The installed `expo-roomplan@1.3.1` source keeps captured rooms, finish/export triggers, and pending export state in its native view; the JS hook has a `reset()` control, but the iOS native view exposes no reset prop. Room Twin therefore keys the adapter by each new scan ID so a restart creates a new hook and native view, captures that ID in the event callbacks, and calls the wrapper's cancel control when the scan becomes inactive. In the inspected wrapper source, successful `exportOnFinish` emits `onExported` before terminal `OK`; Room Twin accepts either callback order and reports a missing export after a timeout. This source inspection and mocked tests do not prove iOS teardown, callback delivery, or RoomPlan capture behavior. Validate cancel → restart, finish/export, and the visible overlay controls on an actual supported device when one is available.
+
+### Register a device and install the development client
+
+Connect a LiDAR-compatible iPhone/iPad to the Apple Developer team. From `apps/mobile`, run the EAS device registration flow and follow its browser/QR prompts:
+
+```powershell
+npx eas-cli@latest login
+npx eas-cli@latest device:create
+```
+
+Then make the first compilation only after the preflight below:
+
+```powershell
+npx eas-cli@latest build --platform ios --profile development
+```
+
+On first use, EAS may ask to create/link an Expo project, select the Apple team, and configure credentials. Confirm the correct team and physical-device distribution. Install the resulting build from the EAS page on the registered device. If a device is added later, update the provisioning profile and rebuild.
+
+To develop, start Metro from Windows:
+
+```powershell
+npm run start:dev-client -- --lan
+```
+
+Keep the device and PC on the same trusted Wi-Fi and open the project from the Room Twin development client. Allow Node/Expo traffic through Windows Firewall on the private network if asked. Use the PC's LAN IPv4 address for backend access from the phone; on the phone, `localhost` refers to the phone. A secured Expo tunnel can help when LAN discovery is unavailable.
+
+### First-build preflight
+
+Before consuming a quota-limited EAS compilation:
+
+1. Connect to the intended Expo account and confirm the Apple Developer team has an active membership.
+2. Confirm `com.jonasmaihoefer.roomtwin` is available as an explicit App ID under that team. If it is not, change `ios.bundleIdentifier` in `apps/mobile/app.config.js` and push that committed value before any EAS build; local environment overrides are not used.
+3. Register the actual test iPhone/iPad and verify it is RoomPlan- and LiDAR-compatible.
+4. From `apps/mobile`, run `npm ci`, `npx expo install --check`, `npx expo-doctor`, `npx expo config --type prebuild`, `npm run typecheck`, `npm run lint`, `npm test -- --ci`, and both `npm run export:ios` and `npm run export:web`.
+5. Review the development profile in `eas.json`, select the correct Apple team when EAS prompts, and verify the profile is not set for an iOS simulator.
+6. Only then run `npx eas-cli@latest build --platform ios --profile development` and install its result on the registered device.
+
+### Validate RoomPlan on device
+
+Grant camera permission, start a real scan, finish it through Apple's preview, inspect the exported JSON and USDZ URL, share the JSON, then repeat and cancel a scan. Check walls/surfaces, openings, object categories, dimensions, transforms, permission denial, unsupported hardware, export errors, and a second scan after cancellation. Record the device model, iOS version, build URL, and outcome. Do not commit room captures or personal room images. Browser tests validate the app workflow and mock fixture only; they cannot confirm camera permission, LiDAR availability, native capture, Apple's preview, file URLs, or iOS signing.
+
+## Compatibility assessment
+
+This project uses Expo SDK 57, React Native 0.86.3, and React 19.2.3, with SDK-matched Expo packages and the latest published `expo-roomplan` 1.3.1. SDK 57 is a stable supported release line; SDK 58 has since introduced the iOS 27 scene-based lifecycle, which would add native integration changes without improving this workflow. `expo-roomplan` 1.3.1 retains the documented `RoomPlanView`/`useRoomPlanView` APIs used here: controlled capture, finish/cancel, terminal status, `sendFileLoc` JSON file URLs, and export callbacks. It requires iOS 16+ and RoomPlan multi-room support requires iOS 17; Room Twin explicitly targets iOS 17. SDK 57 supports the built-in `ios.deploymentTarget` app config field, so no `expo-build-properties` plugin is needed. The native module and its Pod/Xcode/EAS compatibility remain unverified until a cloud build and a physical LiDAR-device test.
 
 ## Troubleshooting
 
-- **`npm ci` fails:** confirm Node 20 LTS, internet access to npm, and that `package-lock.json` matches `package.json`.
-- **App opens but scanner is unavailable:** verify the installed app is the development build, not Expo Go; rebuild after native changes.
-- **Camera denied / scan fails:** enable Camera for Room Twin in iOS Settings; confirm the device supports RoomPlan and LiDAR.
-- **No `jsonUrl` or unreadable JSON:** inspect the EAS device logs and wrapper export event. The UI reports missing, unreadable, and invalid JSON separately; preserve the native JSON as evidence before designing conversion.
-- **Phone cannot reach API:** use the PC's private LAN IP, confirm both devices are on the same Wi-Fi, allow the selected Python/Docker port through Windows Firewall for Private networks, and verify `/health` from the phone browser.
-- **Expo cannot discover Metro:** use `--lan` and check firewall/private-network settings. A secured Expo tunnel can help on isolated networks.
-
-## Verification record
-
-| Stage | Evidence in this foundation |
-|---|---|
-| App/backend automated checks | CI definitions are committed; local results are recorded in the PR description |
-| EAS cloud iOS build attempted | No — Expo account, Apple team/signing, and device registration are not available to this implementation session |
-| Physical-device RoomPlan JSON inspected | No — pending a signed build and RoomPlan-compatible LiDAR device |
+- **`npm ci` fails:** use Node 22.14+ in the 22.x line, ensure npm access, and keep the package lock with the manifest.
+- **Web fails to bundle RoomPlan:** web should resolve `ScannerSurface.web.tsx`; check imports for any direct native module reference outside the iOS adapter.
+- **Native scanner unavailable:** install the Room Twin development client, not Expo Go, and rebuild after native changes.
+- **Camera denied or scan fails:** enable Camera for Room Twin in iOS Settings and confirm the device supports RoomPlan and LiDAR.
+- **Missing or unreadable JSON URL:** inspect the native export event and device logs. The app reports missing URLs, read failures, and invalid JSON; no hardware behavior is assumed from browser tests.
+- **Phone cannot reach API:** use the PC's private LAN IP, verify both devices are on the same Wi-Fi, and allow the Python/Docker port through Windows Firewall for Private networks.
