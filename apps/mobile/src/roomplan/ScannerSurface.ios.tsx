@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { RoomPlanExport, ScannerSurfaceProps } from "./scannerTypes";
 
@@ -31,21 +31,20 @@ export default function ScannerSurface(props: ScannerSurfaceProps) {
       <Text style={styles.unavailableText}>Native RoomPlan is unavailable. Install the Room Twin iOS development build on a supported device.</Text>
     </View> : null;
   }
-  return <NativeScannerSurface {...props} library={nativeLibrary} />;
+  return <NativeScannerSurface key={props.sessionId} {...props} library={nativeLibrary} />;
 }
 
 function NativeScannerSurface({ active, sessionId, finishTrigger, onStatus, onExported, library }: ScannerSurfaceProps & { library: RoomPlanLibrary }) {
-  const session = useRef(sessionId);
-  const callbacks = useRef({ onStatus, onExported });
-  useEffect(() => { callbacks.current = { onStatus, onExported }; }, [onStatus, onExported]);
+  // This component is keyed by sessionId. Closures stay bound to the scan
+  // that created this native view, even if iOS delivers an event late.
   const onNativeStatus = useCallback((event: { nativeEvent?: { status?: string; errorMessage?: string } }) => {
     const { status, errorMessage } = event.nativeEvent ?? {};
     const mapped = status === "OK" || status === "Canceled" || status === "Error" ? status : "Error";
-    callbacks.current.onStatus(mapped, errorMessage || (mapped === "Error" ? `Unexpected RoomPlan status: ${status ?? "missing"}` : undefined), session.current);
-  }, []);
+    onStatus(mapped, errorMessage || (mapped === "Error" ? `Unexpected RoomPlan status: ${status ?? "missing"}` : undefined), sessionId);
+  }, [onStatus, sessionId]);
   const onNativeExport = useCallback((event: { nativeEvent?: { scanUrl?: string; jsonUrl?: string } }) => {
-    callbacks.current.onExported({ ...(event.nativeEvent ?? {}), source: "apple-roomplan" } satisfies RoomPlanExport, session.current);
-  }, []);
+    onExported({ ...(event.nativeEvent ?? {}), source: "apple-roomplan" } satisfies RoomPlanExport, sessionId);
+  }, [onExported, sessionId]);
   const { viewProps, controls: roomPlanControls } = library.useRoomPlanView({
     scanName: "RoomTwinScan",
     exportType: library.ExportType?.Parametric,
@@ -59,7 +58,6 @@ function NativeScannerSurface({ active, sessionId, finishTrigger, onStatus, onEx
 
   useEffect(() => {
     if (active) {
-      session.current = sessionId;
       start();
     } else {
       // Keep the native view mounted until the controller passes running=false to RoomPlanView.

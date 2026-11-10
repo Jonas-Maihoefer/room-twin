@@ -57,11 +57,7 @@ From the backend folder, `.\.venv\Scripts\python.exe -m pytest` runs the backend
 
 Native RoomPlan needs an EAS-signed iOS development client because Expo Go does not include `expo-roomplan`. EAS compilation from Windows is remote. Register a real LiDAR-compatible iPhone/iPad first; confirm a free EAS compilation is worth spending before building.
 
-The app's default identifier is `com.jonasmaihoefer.roomtwin`; availability is not verified. Confirm or register an unused explicit App ID under the correct Apple Developer team. In the build PowerShell session, set the chosen ID:
-
-```powershell
-$env:IOS_BUNDLE_IDENTIFIER = "com.your-domain.roomtwin"
-```
+The app uses the fixed identifier `com.jonasmaihoefer.roomtwin`; availability is not verified. Confirm that exact explicit App ID under the correct Apple Developer team before building. If unavailable, update `ios.bundleIdentifier` in `apps/mobile/app.config.js` and commit the value so local config and the remote EAS build resolve identically. There is no `IOS_BUNDLE_IDENTIFIER` PowerShell override.
 
 Then authenticate, register the physical device, and initiate the development build from `apps/mobile`:
 

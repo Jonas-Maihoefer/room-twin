@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import ScannerSurface, { isScannerAvailable } from "./src/roomplan/ScannerSurface";
 import { readExportJson } from "./src/roomplan/readExportJson";
@@ -18,7 +18,9 @@ export default function App() {
   const [finishTrigger, setFinishTrigger] = useState<number | undefined>();
   const [showScanner, setShowScanner] = useState(false);
   const [sessionId, setSessionId] = useState(0);
+  const [finishSequence, setFinishSequence] = useState(0);
   const activeSession = useRef(0);
+  const exportTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scannerAvailable = useMemo(() => isScannerAvailable(), []);
 
   const setCurrentPhase = useCallback((next: Phase) => {
@@ -28,11 +30,21 @@ export default function App() {
 
   const onStatus = useCallback((status: RoomPlanStatus, error?: string, eventSession = activeSession.current) => {
     if (eventSession !== activeSession.current) return;
-    if (phaseRef.current === "reading" || phaseRef.current === "ready") return;
+    if (phaseRef.current === "reading" || phaseRef.current === "ready" || phaseRef.current === "canceled" || phaseRef.current === "error" || phaseRef.current === "idle") return;
     if (status === "OK") {
       // The export callback can precede a delayed terminal status; it must not regress reading or ready.
-      setCurrentPhase("exporting");
-      setMessage("Scan finished. Waiting for the structured JSON export…");
+      if (phaseRef.current !== "exporting") {
+        setCurrentPhase("exporting");
+        setMessage("Scan finished. Waiting for the structured JSON export…");
+      }
+      if (!exportTimeout.current) {
+        exportTimeout.current = setTimeout(() => {
+          if (eventSession !== activeSession.current || phaseRef.current !== "exporting") return;
+          setCurrentPhase("error");
+          setShowScanner(false);
+          setMessage("RoomPlan finished without returning an export. Start a new scan and try again.");
+        }, 30000);
+      }
     } else if (status === "Canceled") {
       setShowScanner(false);
       setCurrentPhase("canceled");
@@ -46,6 +58,8 @@ export default function App() {
 
   const onExported = useCallback(async (files: RoomPlanExport, eventSession = activeSession.current) => {
     if (eventSession !== activeSession.current || phaseRef.current === "canceled" || phaseRef.current === "error") return;
+    if (exportTimeout.current) clearTimeout(exportTimeout.current);
+    exportTimeout.current = null;
     setCurrentPhase("reading");
     setMessage("Validating exported JSON…");
     setSource(files.source);
@@ -68,6 +82,8 @@ export default function App() {
   }, [setCurrentPhase]);
 
   const start = () => {
+    if (exportTimeout.current) clearTimeout(exportTimeout.current);
+    exportTimeout.current = null;
     const nextSession = activeSession.current + 1;
     activeSession.current = nextSession;
     setSessionId(nextSession);
@@ -80,9 +96,10 @@ export default function App() {
     setShowScanner(true);
   };
   const cancel = () => {
+    if (exportTimeout.current) clearTimeout(exportTimeout.current);
+    exportTimeout.current = null;
     const canceledSession = activeSession.current + 1;
     activeSession.current = canceledSession;
-    setSessionId(canceledSession);
     setShowScanner(false);
     setCurrentPhase("canceled");
     setMessage("Scan canceled.");
@@ -90,7 +107,16 @@ export default function App() {
   const finish = () => {
     setCurrentPhase("exporting");
     setMessage("Finishing scan and preparing the JSON export…");
-    setFinishTrigger(Date.now());
+    const finishSession = activeSession.current;
+    if (exportTimeout.current) clearTimeout(exportTimeout.current);
+    exportTimeout.current = setTimeout(() => {
+      if (finishSession !== activeSession.current || phaseRef.current !== "exporting") return;
+      setCurrentPhase("error");
+      setShowScanner(false);
+      setMessage("RoomPlan finished without returning an export. Start a new scan and try again.");
+    }, 30000);
+    setFinishSequence((sequence) => sequence + 1);
+    setFinishTrigger(finishSequence + 1);
   };
   const shareJson = async () => {
     if (!json) return;
@@ -115,7 +141,7 @@ export default function App() {
           {phase === "reading" || phase === "exporting" ? <ActivityIndicator color="#b8f16b" /> : null}
           <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>
           {!scannerAvailable ? <Text style={styles.note}>Native RoomPlan is unavailable in this runtime. Install the signed iOS development client on a supported device.</Text> : null}
-          {showScanner ? <View style={styles.actions}>
+          {showScanner && Platform.OS !== "ios" ? <View style={styles.actions}>
             <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={cancel}><Text style={styles.buttonText}>Cancel</Text></Pressable>
             <Pressable accessibilityRole="button" style={styles.button} onPress={finish}><Text style={styles.buttonText}>Finish scan</Text></Pressable>
           </View> : <Pressable accessibilityRole="button" disabled={!scannerAvailable} style={[styles.button, !scannerAvailable && styles.disabled]} onPress={start}><Text style={styles.buttonText}>Start scan</Text></Pressable>}
@@ -129,6 +155,12 @@ export default function App() {
         </View> : null}
       </ScrollView>
       <ScannerSurface active={showScanner} sessionId={sessionId} finishTrigger={finishTrigger} onStatus={onStatus} onExported={onExported} />
+      {showScanner && Platform.OS === "ios" ? <View pointerEvents="box-none" style={styles.nativeControls}>
+        <View style={styles.nativeActions}>
+          <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={cancel}><Text style={styles.buttonText}>Cancel</Text></Pressable>
+          <Pressable accessibilityRole="button" style={styles.button} onPress={finish}><Text style={styles.buttonText}>Finish scan</Text></Pressable>
+        </View>
+      </View> : null}
     </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -151,5 +183,7 @@ const styles = StyleSheet.create({
   secondaryButton: { borderColor: "#62705f", borderWidth: 1, padding: 14, borderRadius: 12, alignItems: "center" },
   buttonText: { color: "#101511", fontWeight: "700" },
   actions: { flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  nativeControls: { ...StyleSheet.absoluteFill, zIndex: 20, justifyContent: "flex-end", paddingHorizontal: 24, paddingBottom: 24 },
+  nativeActions: { flexDirection: "row", gap: 12, justifyContent: "space-between", backgroundColor: "rgba(16,21,17,0.92)", borderRadius: 16, padding: 12 },
   preview: { color: "#cfdbc9", backgroundColor: "#111713", padding: 12, borderRadius: 10, fontFamily: "monospace", fontSize: 11 },
 });

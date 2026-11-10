@@ -73,13 +73,11 @@ Room Twin's build profile targets physical devices (`simulator: false`) and uses
 
 ### Bundle identifier and signing
 
-The app defaults to `com.jonasmaihoefer.roomtwin`. This is a stable project default, **not a claim that the identifier is available or registered**. Before the first EAS build, check the Apple Developer account for an unused explicit App ID and set the selected identifier in PowerShell:
+The app uses the fixed identifier `com.jonasmaihoefer.roomtwin` in local Expo configuration and every EAS profile. This value is deterministic and does not depend on a Windows PowerShell variable being copied to EAS. It is a project setting, **not a claim that the identifier is available or registered with Apple**. Before the first EAS build, check the Apple Developer account for this exact explicit App ID. If it is unavailable, change the single value in `apps/mobile/app.config.js`, then commit and push that change before building; do not override it with a local-only environment variable. Sign into the correct Expo account and let EAS create or use the Apple development certificate and provisioning profile for the chosen team. Never commit Apple credentials, certificates, private keys, provisioning profiles, or EAS tokens.
 
-```powershell
-$env:IOS_BUNDLE_IDENTIFIER = "com.your-domain.roomtwin"
-```
+### Scan session lifecycle
 
-Use the same value in the Apple Developer portal and for every later build. The app config reads this environment variable; do not commit Apple credentials, certificates, private keys, provisioning profiles, or EAS tokens. Sign into the correct Expo account and let EAS create or use the Apple development certificate and provisioning profile for the chosen team. Apple Developer Program membership is required for device signing.
+The installed `expo-roomplan@1.3.1` source keeps captured rooms, finish/export triggers, and pending export state in its native view; the JS hook has a `reset()` control, but the iOS native view exposes no reset prop. Room Twin therefore keys the adapter by each new scan ID so a restart creates a new hook and native view, captures that ID in the event callbacks, and calls the wrapper's cancel control when the scan becomes inactive. In the inspected wrapper source, successful `exportOnFinish` emits `onExported` before terminal `OK`; Room Twin accepts either callback order and reports a missing export after a timeout. This source inspection and mocked tests do not prove iOS teardown, callback delivery, or RoomPlan capture behavior. Validate cancel → restart, finish/export, and the visible overlay controls on an actual supported device when one is available.
 
 ### Register a device and install the development client
 
@@ -111,7 +109,7 @@ Keep the device and PC on the same trusted Wi-Fi and open the project from the R
 Before consuming a quota-limited EAS compilation:
 
 1. Connect to the intended Expo account and confirm the Apple Developer team has an active membership.
-2. Confirm the chosen bundle ID is available and registered with that team; set `IOS_BUNDLE_IDENTIFIER` in the same PowerShell session.
+2. Confirm `com.jonasmaihoefer.roomtwin` is available as an explicit App ID under that team. If it is not, change `ios.bundleIdentifier` in `apps/mobile/app.config.js` and push that committed value before any EAS build; local environment overrides are not used.
 3. Register the actual test iPhone/iPad and verify it is RoomPlan- and LiDAR-compatible.
 4. From `apps/mobile`, run `npm ci`, `npx expo install --check`, `npx expo-doctor`, `npx expo config --type prebuild`, `npm run typecheck`, `npm run lint`, `npm test -- --ci`, and both `npm run export:ios` and `npm run export:web`.
 5. Review the development profile in `eas.json`, select the correct Apple team when EAS prompts, and verify the profile is not set for an iOS simulator.
