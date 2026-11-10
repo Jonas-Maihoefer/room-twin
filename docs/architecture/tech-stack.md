@@ -1,40 +1,35 @@
-# Technikstack – Room Twin
+# Technology stack
 
-**Die Systemarchitektur ist festgelegt:** eigene iOS-App, Apple RoomPlan zur Erfassung, direkter Upload an ein Backend zur Geometrie- und Asset-Verarbeitung sowie GLB als MVP-Ergebnis. Nicht alle konkreten Frameworks und Bibliotheken sind schon technisch validiert.
+The system architecture is chosen: a custom iOS app using Apple RoomPlan, direct backend integration, furniture replacement, and GLB output. The technologies below establish the first foundation; native compatibility and the complete processing path still need validation.
 
-[Systemarchitektur](architecture.md) · [Systemablauf](system-flow.md) · [Testplan](../testing/ios-roomplan-validation.md)
+## Chosen requirements
 
-## Verbindliche technische Vorgaben
-
-| Bereich | Festlegung |
+| Area | Requirement |
 |---|---|
-| Client | **Eigene iOS-App** mit integrierter Scanfunktion |
-| Erfassung | **Apple RoomPlan-SDK**, native iOS-Anbindung und kompatibles LiDAR-Gerät |
-| Datentransfer | **Direkter API-Upload aus der App** mit semantischen Raum- und Objektdaten |
-| Verarbeitung | Backend-Pipeline für Geometrie, Ersatz-Assets und 3D-Szene |
-| MVP-Ergebnis | **GLB**, abruf- und teilbar über die App |
-| Weiterer Ausbau | In-App-Viewer und -Editor erst nach dem MVP |
+| Client | Custom iOS app with integrated scan |
+| Capture | Apple RoomPlan on a supported LiDAR device |
+| Transfer | Direct API upload using structured room and object data |
+| Processing | Backend geometry and asset pipeline |
+| MVP output | GLB available to download and share in the app |
+| Later work | In-app viewer or editor only after the MVP |
 
-## Geplante, noch zu validierende Umsetzungstechnologien
+## Current implementation and validation
 
-| Bereich | Ausgangspunkt | Zu prüfen |
+| Area | Current foundation | Validation status |
 |---|---|---|
-| App-Oberfläche | React Native + Expo | Native Module, Build-Workflow und iOS-Kompatibilität |
-| RoomPlan-Anbindung | Native Swift-Bridge bzw. geeigneter Wrapper, etwa `expo-roomplan` | SDK-Abdeckung, Kompatibilität und Funktionsfähigkeit auf echtem Gerät |
-| Backend-Sprache | Python | Datentransformationen und Geometriebearbeitung |
-| Backend-API | FastAPI | Validierter Upload, Status, Fehler und Ergebnisabruf |
-| 3D-Verarbeitung | trimesh, ggf. ergänzende Werkzeuge | Transformationen, Modellimport, Szenenaufbau und stabiler GLB-Export |
-| Ersatzmodelle | Lokale GLB-Asset-Bibliothek | Kategorien, Skalierung, Lizenzen und Laufzeit |
+| iOS app | TypeScript, React Native, Expo SDK 53 | App checks are recorded in the PR description; device build and native compatibility remain pending |
+| iOS build | EAS internal development build | Cloud build not attempted; Expo project access, Apple signing, and device registration are required |
+| Room scanning | Apple RoomPlan through expo-roomplan 1.2.1 | Wrapper podspec and config plugin require iOS 17; JSON and USDZ export have not been verified on-device |
+| API | Python 3.11+, FastAPI, Uvicorn | Local and Docker scaffold with a provisional versioned ingestion stub |
+| Geometry and GLB | To be selected after inspecting real RoomPlan exports | Not implemented |
 
-Diese Kandidaten sind **Implementierungsentscheidungen innerhalb der beschlossenen Architektur**, keine zur Wahl stehenden Systemvarianten. Insbesondere darf die bloße Verfügbarkeit eines RoomPlan-Wrappers nicht als erfolgreich nachgewiesene Gerätekompatibilität gelten.
+The JavaScript package versions are recorded in the app manifest and lockfile. The RoomPlan wrapper is isolated behind an app-facing adapter so its version-specific surface can be changed independently.
 
-## Datenformate
+## Data formats
 
-- **Erfassung:** strukturierte RoomPlan-Ergebnisse. Die App mappt diese in ein mit dem Backend abgestimmtes, versioniertes API-Format.
-- **Interne Verarbeitung:** Räume, Oberflächen, Öffnungen und Objekte mit Kategorien, IDs, Dimensionen und Transformationen.
-- **MVP-Ausgabe:** GLB als transportierbare 3D-Szene.
-- **Weitere Formate:** nur auf gesonderte Anforderung; etwa BLEND könnte eine zusätzliche Verarbeitung erfordern.
+- **Capture:** Apple's structured RoomPlan result, with its actual exported fields to be confirmed on-device.
+- **API input:** a future explicit, versioned mapping that preserves or deliberately handles dimensions, categories, transforms, surfaces, and openings. The provisional envelope treats the source JSON as opaque.
+- **MVP output:** GLB as a portable 3D scene.
+- **Additional formats:** only if separately required; formats such as BLEND could need extra processing.
 
-## Entwicklungsumgebung
-
-RoomPlan muss auf unterstützter Apple-Hardware erprobt werden. Bei Expo ist für native Module ein eigener **Development Build** nötig; Expo Go allein genügt nicht. Der Geräte-Build und sein Signing sind früh nachzuweisen. Die reale End-to-End-Pipeline wird anhand des [Testplans](../testing/ios-roomplan-validation.md) geprüft.
+Expo Go cannot load the native RoomPlan module. A signed EAS development build and a physical compatible LiDAR device are required to validate capture and export. See the [RoomPlan validation plan](../testing/ios-roomplan-validation.md).

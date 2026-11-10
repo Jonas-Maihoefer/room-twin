@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Room Twin",
+    "slug": "room-twin",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "roomtwin",
+    "platforms": ["ios"],
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.example.roomtwin",
+      "deploymentTarget": "17.0",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Room Twin uses the camera and LiDAR sensor to scan room geometry with Apple RoomPlan. Scan data stays on this device until you choose to send it to your configured backend."
+      }
+    },
+    "plugins": ["expo-dev-client", "expo-roomplan"]
+  }
+}

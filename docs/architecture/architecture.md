@@ -1,54 +1,38 @@
-# Systemarchitektur – eigene iOS-App mit RoomPlan
+# Chosen system architecture
 
-> **Verbindliche Architektur:** Room Twin besteht aus einer eigenen iOS-App mit Apples RoomPlan-SDK und einem angebundenen Backend zur 3D-Modellgenerierung. Die App lädt strukturierte Scandaten direkt über die API hoch.
+Room Twin's MVP uses a custom iOS app with Apple RoomPlan and a directly connected backend.
 
-[Dokumentationsübersicht](../README.md) · [Systemablauf](system-flow.md) · [Technikstack](tech-stack.md) · [Testplan](../testing/ios-roomplan-validation.md)
+## Intended MVP flow
 
-## Zielbild
+1. A user scans a room inside the Room Twin app on a supported LiDAR iPhone or iPad.
+2. The app receives structured RoomPlan data about surfaces, openings, and recognized objects.
+3. A versioned adapter prepares a payload that matches the backend contract. RoomPlan does not define Room Twin's API schema.
+4. The app sends the payload directly to the backend.
+5. The backend validates the input and coordinate systems, processes room geometry, and places suitable 3D assets.
+6. The backend makes a GLB available for the app to download and share.
 
-Die **Room-Twin-iOS-App** erfasst den Raum mit RoomPlan und liest die von Apple bereitgestellten semantischen Raum- und Objektdaten aus. Sie überführt diese Daten in ein mit dem Backend abgestimmtes Übertragungsformat und sendet sie **direkt über die API**. Das Backend erstellt unter Verwendung einer 3D-Asset-Bibliothek eine Szene und stellt das Ergebnis als **GLB** bereit. Die App kann das Modell herunterladen und teilen.
+## Responsibilities
 
-## Komponenten und Zuständigkeiten
-
-| Komponente | Verantwortung |
+| Component | Responsibility |
 |---|---|
-| Eigene iOS-App | Scan starten/abschließen, Fortschritt und Fehler anzeigen, Daten aufbereiten und an die API senden, Ergebnis abrufen/teilen |
-| Native RoomPlan-Integration | LiDAR-basierte Erfassung und Zugriff auf semantische Daten mit Apples RoomPlan-SDK |
-| Datenmodell für den Upload | Raumflächen, Objektkategorien, Dimensionen und räumliche Transformationen konsistent abbilden |
-| Backend-API | Upload annehmen und validieren, Verarbeitung starten, Fehler behandeln und Ergebnis bereitstellen |
-| Geometrie-/Asset-Pipeline | Raumgeometrie interpretieren, Ersatz-Assets auswählen, skalieren, transformieren und in eine Szene einsetzen |
-| 3D-Asset-Bibliothek | Geeignete Modelle für erkannte Objektkategorien bereitstellen |
-| Modell-Export | Eine nutzbare **GLB-Datei** generieren |
+| iOS app | Start and finish scans, show progress and errors, prepare and upload data, retrieve and share results |
+| RoomPlan integration | Capture rooms with LiDAR and provide Apple's structured room and object data |
+| API adapter | Map source data into a versioned backend payload while preserving dimensions, categories, transforms, surfaces, and openings |
+| Backend API | Validate uploads, start or perform processing, handle errors, and provide results |
+| Geometry and asset pipeline | Interpret room geometry, select replacement assets, scale and place them, and build a scene |
+| Asset library | Provide suitable 3D models for recognized object categories |
+| Model export | Produce a usable GLB file |
 
-## Verbindlicher Ablauf
+## Current implementation boundary
 
-1. Nutzer startet und beendet die Erfassung **innerhalb der Room-Twin-App** auf einem unterstützten LiDAR-fähigen iOS-Gerät.
-2. Die App erhält strukturierte RoomPlan-Daten zu Raumflächen, Öffnungen und erkannten Objekten.
-3. Die App erzeugt daraus einen vereinbarten API-Payload. Das RoomPlan-SDK definiert **nicht automatisch das endgültige Backend-JSON-Schema**.
-4. Die App überträgt den Payload direkt und abgesichert an das Backend.
-5. Das Backend prüft Eingabedaten und Koordinatensysteme, verarbeitet Raumgeometrie und setzt passende 3D-Assets ein.
-6. Das Backend stellt eine GLB-Datei bereit, die die App abruft und herunterladbar/teilbar macht.
+The app foundation in this repository exercises RoomPlan capture, reads the exported source JSON, and displays and shares that file. Its wrapper is isolated behind an adapter. The backend provides a health endpoint and a provisional versioned scan-ingestion envelope; it validates the envelope and returns a stub response without storing or transforming scan content.
 
-Der [Systemablauf](system-flow.md) zeigt die Schritte als Diagramm.
+The source export and backend payload are separate formats. The actual RoomPlan fields and export behavior must be inspected on-device before defining a mapping. The provisional source payload is opaque and does not assign Room Twin meaning to Apple's fields. This foundation does not implement API upload from the app, furniture matching, geometry processing, GLB generation, or production storage.
 
-## Schnittstellen und Datenqualität
+The Expo RoomPlan wrapper is a candidate integration. Expo Go does not include this native module. The app targets iOS 17 based on the wrapper's podspec and config plugin, but only a successful EAS build and physical-device JSON inspection can validate the path.
 
-Die semantischen Scandaten müssen, soweit von RoomPlan erfasst, Raum- und Oberflächengeometrie, Öffnungen, Objektkategorien, Abmessungen, Positionen und Orientierungen erhalten. Maßstäbe und Koordinatensysteme sind zwischen App, Backend und Asset-Bibliothek konsistent zu definieren.
+## MVP scope and constraints
 
-**Noch auszuarbeiten innerhalb dieser Architektur:** versioniertes API-Datenformat, Endpunkte, Fehlermodell, Uploadgrößen und Timeouts, Authentifizierung, temporäre Speicherung und Ergebnisabruf. Diese Implementierungsdetails stellen die Architektur nicht infrage.
+The first MVP demonstrates scan in the app, structured data transfer, direct backend upload, at least one correctly scaled and positioned replacement asset, GLB generation, and download or sharing in the app. A 3D viewer or editor is a later extension, not a requirement for this MVP.
 
-## Umfang des ersten MVP
-
-**Machbarkeitsnachweis:** `Scan in eigener App → RoomPlan-Daten → direkter Backend-Upload → korrekt platziertes Ersatz-Asset → GLB → Download/Teilen in der App`.
-
-Ein integrierter 3D-Viewer/Editor ist eine **optionale spätere Erweiterung** und nicht Bestandteil des ersten MVP. Zusätzliche Exportformate wie BLEND gehören zunächst ebenfalls nicht dazu.
-
-## Voraussetzungen und Risiken
-
-- **Gerät:** Ein mit RoomPlan kompatibles, LiDAR-fähiges iPhone bzw. iPad mit unterstützter iOS-Version ist für reale Scans erforderlich.
-- **Native Anbindung:** RoomPlan erfordert iOS-native Integration. Bei Expo reicht Expo Go nicht; ein eigener Development Build ist nötig.
-- **Signierung:** Tests auf einem physischen Gerät benötigen einen passend signierten Build; eine App-Store-Veröffentlichung ist dafür nicht erforderlich.
-- **Datenqualität:** Unvollständige Erkennung und fehlende Angaben müssen kontrolliert behandelt und anhand realer Räume überprüft werden.
-- **Datenschutz:** Indoor-Scans können sensible Informationen enthalten. Übertragung absichern und keine privaten Scans unkontrolliert ins öffentliche Repository übernehmen.
-
-Die konkrete Wahl einzelner Implementierungsbibliotheken und erforderliche Machbarkeitstests sind im [Technikstack](tech-stack.md) und [Testplan](../testing/ios-roomplan-validation.md) dokumentiert.
+The API schema, error model, upload limits, authentication, temporary storage, and result retrieval behavior remain to be designed. Indoor scans can contain sensitive information; use secured transfer and do not commit private room captures.

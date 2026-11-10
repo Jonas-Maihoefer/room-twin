@@ -1,17 +1,22 @@
-# Dokumentationsübersicht – Room Twin
+# Documentation
 
-**Architekturstatus: entschieden.** Room Twin wird als **eigene iOS-App mit Apples RoomPlan-SDK und direkter Backend-Anbindung** umgesetzt. Offene Fragen zu einzelnen Bibliotheken oder Schnittstellendetails ändern diese Festlegung nicht.
+**Architecture status: chosen.** Room Twin uses a custom iOS app with Apple RoomPlan and direct backend integration. Open implementation details do not change that architecture decision.
 
-## Architektur
+## Architecture
 
-1. [Verbindliche Systemarchitektur](architecture/architecture.md) – Komponenten, Verantwortlichkeiten, MVP-Umfang und Integrationsgrenzen.
-2. [Systemablauf](architecture/system-flow.md) – ein Datenfluss vom Raumscan zum Modell in der App.
-3. [Technikstack](architecture/tech-stack.md) – feste Anforderungen und zu validierende Implementierungstechnologien.
+1. [System architecture](architecture/architecture.md) — components, responsibilities, MVP scope, and integration boundaries.
+2. [System flow](architecture/system-flow.md) — the intended path from room scan to model delivery, with the current implementation boundary.
+3. [Technology stack](architecture/tech-stack.md) — chosen requirements, implementation technologies, and validation status.
 
-## Verifikation
+## Development
 
-- [iOS-/RoomPlan-Integration und Ende-zu-Ende-Tests](testing/ios-roomplan-validation.md) – Nachweis der realen Scan-zu-Modell-Pipeline auf einem unterstützten Gerät.
+- [How to dev](how-to-dev.md) — setup and daily development routine.
+- [Windows development](development/windows.md) — EAS signing, device registration, networking, and troubleshooting.
 
-## Aktueller Stand
+## Verification
 
-Dieses Repository enthält noch keine Implementierung von App oder Backend. Die beschriebenen Abläufe und Testfälle sind **Zielzustand bzw. Testplan**, nicht schon erfolgreich getestete Funktionen.
+- [iOS RoomPlan and end-to-end validation](testing/ios-roomplan-validation.md) — plan for proving the real scan-to-model pipeline on a supported device.
+
+## Current implementation
+
+The repository contains an Expo app foundation and a FastAPI scaffold. The app can exercise the native capture/export path, but physical-device validation remains pending. The backend ingestion route is a provisional stub; the complete upload, furniture replacement, and GLB pipeline are not implemented.

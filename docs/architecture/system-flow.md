@@ -1,35 +1,25 @@
-# Systemablauf – Room Twin
+# System flow
 
-**Verbindlicher Ablauf:** Die eigene iOS-App erfasst Räume mit Apple RoomPlan, überträgt strukturierte Scandaten direkt an das Backend und macht das daraus generierte 3D-Modell verfügbar.
+The [system architecture](architecture.md) defines the intended MVP path:
 
-[Systemarchitektur](architecture.md) · [Dokumentationsübersicht](../README.md)
+1. The Room Twin iOS app starts an Apple RoomPlan capture.
+2. RoomPlan provides structured source data.
+3. A versioned API adapter maps the source data to the backend contract.
+4. The app uploads the payload directly to the backend.
+5. The backend validates geometry and coordinates, then selects, scales, and places replacement furniture.
+6. The backend generates a GLB scene.
+7. The app downloads or shares the result.
 
-## Scan bis Ergebnis
+## Current implementation
 
-```mermaid
-flowchart TD
-    A[Eigene iOS-App: Scan starten] --> B[Apple RoomPlan: Raum und Objekte erfassen]
-    B --> C[App: Daten für Backend-API aufbereiten]
-    C --> D[Direkter, abgesicherter Upload]
-    D --> E[Backend: Eingabe und Geometrie validieren]
-    F[3D-Asset-Bibliothek] --> G[Assets zuordnen, skalieren und platzieren]
-    E --> G
-    G --> H[3D-Szene als GLB generieren]
-    H --> I[App: Modell abrufen, herunterladen oder teilen]
-    D -. Übertragungsfehler .-> J[App: verständliche Fehlermeldung]
-    E -. Ungültige Daten .-> J
-```
+The mobile foundation currently covers RoomPlan capture and local source JSON export, inspection, and sharing. It does not yet map the source into the API contract or upload it.
 
-## Verantwortlichkeiten
+The backend currently exposes a health endpoint and validates a provisional versioned source envelope, returning a stub response. It does not persist or transform scan content. Furniture replacement and GLB generation are not implemented. Native RoomPlan export remains to be checked with an EAS development build on a physical compatible device. See the [Windows guide](../development/windows.md) for build and device steps.
 
-- **iOS-App:** Native RoomPlan-Erfassung, Scan-Aufbereitung, direkter API-Aufruf, Anzeige des Verarbeitungsstatus und Bereitstellung des Ergebnisses.
-- **Backend:** Datenvalidierung, Geometrie- und Transformationslogik, Asset-Zuordnung und GLB-Generierung.
-- **Asset-Bibliothek:** Geeignete Ersatzmodelle; für den MVP ist eine lokale Bibliothek ausreichend.
+## Responsibilities
 
-Das konkrete API-Schema und das Verhalten bei asynchroner Verarbeitung müssen vor der Integration spezifiziert werden. Das Diagramm beschreibt die **festgelegte logische Architektur**, noch keine implementierte Pipeline.
+- **iOS app:** native capture, source data handling, eventual API call, progress and error display, and result delivery.
+- **Backend:** input validation, geometry and transform handling, asset selection, and GLB generation.
+- **Asset library:** replacement models; a local library is sufficient for the initial pipeline.
 
-## Späterer Ausbau
-
-Nach dem MVP kann die App um einen 3D-Viewer und gegebenenfalls einen Editor erweitert werden. Diese Erweiterungen sind **nicht Bestandteil des ersten MVP**.
-
-[Technikstack](tech-stack.md) · [Tests](../testing/ios-roomplan-validation.md)
+A 3D viewer or editor may follow the MVP. It is outside the first MVP scope.
