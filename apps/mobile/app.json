@@ -5,11 +5,9 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "scheme": "roomtwin",
-    "platforms": ["ios"],
+    "platforms": ["ios", "web"],
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "com.example.roomtwin",
       "deploymentTarget": "17.0",
       "supportsTablet": true,
       "infoPlist": {

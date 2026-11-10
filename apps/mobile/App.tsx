@@ -1,125 +1,142 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
-import { loadRoomPlanPackage, RoomPlanExport, RoomPlanStatus, useRoomPlanCallbacks } from "./src/roomplan/bridge";
-import { readRoomPlanJson } from "./src/roomplan/files";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import ScannerSurface, { isScannerAvailable } from "./src/roomplan/ScannerSurface";
+import { readExportJson } from "./src/roomplan/readExportJson";
+import { shareOrDownloadJson } from "./src/roomplan/shareJson";
+import { RoomPlanExport, RoomPlanStatus } from "./src/roomplan/scannerTypes";
 
 type Phase = "idle" | "scanning" | "exporting" | "reading" | "ready" | "error" | "canceled";
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>("idle");
-  const [message, setMessage] = useState("Ready to scan. Use a physical RoomPlan-compatible LiDAR iPhone or iPad.");
+  const phaseRef = useRef<Phase>("idle");
+  const [message, setMessage] = useState("Ready to scan. On iOS, use a compatible LiDAR iPhone or iPad; on web, use the synthetic scanner.");
   const [json, setJson] = useState<string | null>(null);
   const [scanUrl, setScanUrl] = useState<string | null>(null);
+  const [source, setSource] = useState<RoomPlanExport["source"] | null>(null);
   const [finishTrigger, setFinishTrigger] = useState<number | undefined>();
   const [showScanner, setShowScanner] = useState(false);
-  const pkg = useMemo(() => loadRoomPlanPackage(), []);
-  const nativeAvailable = Boolean(pkg?.RoomPlanView);
+  const [sessionId, setSessionId] = useState(0);
+  const activeSession = useRef(0);
+  const scannerAvailable = useMemo(() => isScannerAvailable(), []);
 
-  const onStatus = useCallback((status: RoomPlanStatus, error?: string) => {
+  const setCurrentPhase = useCallback((next: Phase) => {
+    phaseRef.current = next;
+    setPhase(next);
+  }, []);
+
+  const onStatus = useCallback((status: RoomPlanStatus, error?: string, eventSession = activeSession.current) => {
+    if (eventSession !== activeSession.current) return;
+    if (phaseRef.current === "reading" || phaseRef.current === "ready") return;
     if (status === "OK") {
-      setPhase("exporting");
-      setMessage("Scan finished. Waiting for the RoomPlan JSON export…");
+      // The export callback can precede a delayed terminal status; it must not regress reading or ready.
+      setCurrentPhase("exporting");
+      setMessage("Scan finished. Waiting for the structured JSON export…");
     } else if (status === "Canceled") {
-      setPhase("canceled");
       setShowScanner(false);
+      setCurrentPhase("canceled");
       setMessage("Scan canceled. No files were sent to the backend.");
     } else {
-      setPhase("error");
       setShowScanner(false);
+      setCurrentPhase("error");
       setMessage(error || "RoomPlan could not start. Check camera permission and device compatibility.");
     }
-  }, []);
+  }, [setCurrentPhase]);
 
-  const onExported = useCallback(async (files: RoomPlanExport) => {
-    setShowScanner(false);
-    setPhase("reading");
-    if (files.scanUrl) setScanUrl(files.scanUrl);
+  const onExported = useCallback(async (files: RoomPlanExport, eventSession = activeSession.current) => {
+    if (eventSession !== activeSession.current || phaseRef.current === "canceled" || phaseRef.current === "error") return;
+    setCurrentPhase("reading");
+    setMessage("Validating exported JSON…");
+    setSource(files.source);
+    setScanUrl(files.scanUrl ?? null);
     try {
-      const content = await readRoomPlanJson(files.jsonUrl);
+      const content = await readExportJson(files);
+      if (eventSession !== activeSession.current) return;
       setJson(content);
-      setPhase("ready");
-      setMessage("RoomPlan JSON loaded on device. The Room Twin API conversion and upload contract remain separate.");
+      setCurrentPhase("ready");
+      setShowScanner(false);
+      setMessage(files.source === "web-mock"
+        ? "Synthetic scan JSON is ready for inspection. It is not Apple RoomPlan output."
+        : "RoomPlan JSON loaded on device. API conversion and upload remain separate.");
     } catch (error) {
-      setPhase("error");
+      if (eventSession !== activeSession.current) return;
+      setCurrentPhase("error");
+      setShowScanner(false);
       setMessage(error instanceof Error ? error.message : "RoomPlan export failed.");
     }
-  }, []);
+  }, [setCurrentPhase]);
 
-  const callbacks = useRoomPlanCallbacks({ onStatus, onExported });
   const start = () => {
+    const nextSession = activeSession.current + 1;
+    activeSession.current = nextSession;
+    setSessionId(nextSession);
     setJson(null);
     setScanUrl(null);
-    setMessage("Starting RoomPlan. Grant camera access if prompted.");
-    setPhase("scanning");
+    setSource(null);
+    setFinishTrigger(undefined);
+    setMessage("Starting scanner. On iOS, grant camera access if prompted.");
+    setCurrentPhase("scanning");
     setShowScanner(true);
   };
   const cancel = () => {
+    const canceledSession = activeSession.current + 1;
+    activeSession.current = canceledSession;
+    setSessionId(canceledSession);
     setShowScanner(false);
-    setPhase("canceled");
+    setCurrentPhase("canceled");
     setMessage("Scan canceled.");
+  };
+  const finish = () => {
+    setCurrentPhase("exporting");
+    setMessage("Finishing scan and preparing the JSON export…");
+    setFinishTrigger(Date.now());
   };
   const shareJson = async () => {
     if (!json) return;
     try {
-      if (!FileSystem.documentDirectory) throw new Error("App document storage is unavailable.");
-      const target = `${FileSystem.documentDirectory}room-twin-roomplan.json`;
-      await FileSystem.writeAsStringAsync(target, json);
-      await Sharing.shareAsync(target, { mimeType: "application/json", dialogTitle: "Share RoomPlan JSON" });
+      await shareOrDownloadJson(json);
+      setMessage(source === "web-mock" ? "Mock JSON download started." : "JSON share sheet opened.");
     } catch (error) {
       setMessage(error instanceof Error ? `Could not share the JSON file: ${error.message}` : "Could not share the JSON file.");
     }
   };
 
   return (
+    <SafeAreaProvider>
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.eyebrow}>ROOM TWIN · FOUNDATION</Text>
+        <Text style={styles.eyebrow}>ROOM TWIN · DEVELOPMENT</Text>
         <Text style={styles.title}>Room scan</Text>
-        <Text style={styles.copy}>Capture structured room data with Apple RoomPlan. This screen checks the native export path before any product workflow is built.</Text>
-        <Text style={styles.apiTarget}>Configured API: {process.env.EXPO_PUBLIC_API_BASE_URL || "not set"} · uploads are not implemented yet</Text>
+        <Text style={styles.copy}>Develop the shared scan workflow in a Windows browser with synthetic data. Native iOS uses Apple RoomPlan through an isolated adapter.</Text>
+        <Text style={styles.apiTarget}>Configured API: {process.env.EXPO_PUBLIC_API_BASE_URL || "not set"} · uploads are not implemented</Text>
         <View style={styles.card}>
           <Text style={styles.label}>SCAN STATUS</Text>
           {phase === "reading" || phase === "exporting" ? <ActivityIndicator color="#b8f16b" /> : null}
           <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>
-          {!nativeAvailable ? <Text style={styles.note}>Native RoomPlan module is unavailable in this runtime. Install the EAS development build; Expo Go cannot load this native module.</Text> : null}
+          {!scannerAvailable ? <Text style={styles.note}>Native RoomPlan is unavailable in this runtime. Install the signed iOS development client on a supported device.</Text> : null}
           {showScanner ? <View style={styles.actions}>
-            <Pressable style={styles.secondaryButton} onPress={cancel}><Text style={styles.buttonText}>Cancel</Text></Pressable>
-            <Pressable style={styles.button} onPress={() => { setPhase("exporting"); setMessage("Finishing scan and waiting for Apple’s preview and JSON export…"); setFinishTrigger(Date.now()); }}><Text style={styles.buttonText}>Finish scan</Text></Pressable>
-          </View> : <Pressable disabled={!nativeAvailable} style={[styles.button, !nativeAvailable && styles.disabled]} onPress={start}><Text style={styles.buttonText}>Start scan</Text></Pressable>}
+            <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={cancel}><Text style={styles.buttonText}>Cancel</Text></Pressable>
+            <Pressable accessibilityRole="button" style={styles.button} onPress={finish}><Text style={styles.buttonText}>Finish scan</Text></Pressable>
+          </View> : <Pressable accessibilityRole="button" disabled={!scannerAvailable} style={[styles.button, !scannerAvailable && styles.disabled]} onPress={start}><Text style={styles.buttonText}>Start scan</Text></Pressable>}
         </View>
         {json ? <View style={styles.card}>
-          <Text style={styles.label}>EXPORTED APPLE ROOMPLAN JSON</Text>
-          <Text style={styles.note}>{json.length.toLocaleString()} characters loaded. Source JSON is shown as-is and is not the Room Twin API payload.</Text>
+          <Text style={styles.label}>{source === "web-mock" ? "SYNTHETIC MOCK ROOMPLAN JSON" : "APPLE ROOMPLAN JSON"}</Text>
+          <Text style={styles.note}>{json.length.toLocaleString()} characters loaded. {source === "web-mock" ? "This fixture is not authentic Apple output." : "Source data is shown as-is."}</Text>
           {scanUrl ? <Text style={styles.path} numberOfLines={2}>USDZ: {scanUrl}</Text> : null}
-          <Pressable style={styles.secondaryButton} onPress={shareJson}><Text style={styles.buttonText}>Share JSON file</Text></Pressable>
-          <Text style={styles.preview} selectable numberOfLines={18}>{JSON.stringify(JSON.parse(json), null, 2)}</Text>
+          <Pressable accessibilityRole="button" style={styles.secondaryButton} onPress={shareJson}><Text style={styles.buttonText}>{source === "web-mock" ? "Download JSON" : "Share JSON file"}</Text></Pressable>
+          <Text style={styles.preview} selectable>{JSON.stringify(JSON.parse(json), null, 2)}</Text>
         </View> : null}
       </ScrollView>
-      {showScanner && pkg?.RoomPlanView ? <View style={styles.scanOverlay}>
-        {React.createElement(pkg.RoomPlanView as React.ComponentType<any>, {
-          style: StyleSheet.absoluteFillObject,
-          scanName: "RoomTwinScan",
-          exportType: pkg.ExportType?.Parametric,
-          sendFileLoc: true,
-          exportOnFinish: true,
-          running: true,
-          finishTrigger,
-          ...callbacks,
-        })}
-        <SafeAreaView style={styles.overlayActions}>
-          <Pressable style={styles.secondaryButton} onPress={cancel}><Text style={styles.buttonText}>Cancel</Text></Pressable>
-          <Pressable style={styles.button} onPress={() => { setPhase("exporting"); setMessage("Finishing scan and waiting for Apple’s preview and JSON export…"); setFinishTrigger(Date.now()); }}><Text style={styles.buttonText}>Finish scan</Text></Pressable>
-        </SafeAreaView>
-      </View> : null}
+      <ScannerSurface active={showScanner} sessionId={sessionId} finishTrigger={finishTrigger} onStatus={onStatus} onExported={onExported} />
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#101511" },
-  content: { padding: 24, gap: 18 },
+  content: { padding: 24, gap: 18, maxWidth: 900, width: "100%", alignSelf: "center" },
   eyebrow: { color: "#b8f16b", fontSize: 12, letterSpacing: 2, fontWeight: "700", marginTop: 20 },
   title: { color: "#f5f4ec", fontSize: 34, fontWeight: "700" },
   copy: { color: "#b3b9b0", fontSize: 16, lineHeight: 23 },
@@ -134,7 +151,5 @@ const styles = StyleSheet.create({
   secondaryButton: { borderColor: "#62705f", borderWidth: 1, padding: 14, borderRadius: 12, alignItems: "center" },
   buttonText: { color: "#101511", fontWeight: "700" },
   actions: { flexDirection: "row", gap: 12, justifyContent: "space-between" },
-  scanOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "#101511" },
-  overlayActions: { position: "absolute", top: 16, left: 20, right: 20, flexDirection: "row", justifyContent: "space-between" },
   preview: { color: "#cfdbc9", backgroundColor: "#111713", padding: 12, borderRadius: 10, fontFamily: "monospace", fontSize: 11 },
 });

@@ -1,22 +1,12 @@
-import * as FileSystem from "expo-file-system";
-import { readRoomPlanJson } from "./files";
-
-jest.mock("expo-file-system", () => ({ readAsStringAsync: jest.fn() }));
+import { parseRoomPlanJson } from "./files";
 
 describe("readRoomPlanJson", () => {
-  it("reads and preserves valid Apple JSON", async () => {
+  it("preserves valid JSON", () => {
     const source = '{"walls":[{"dimensions":[2,3,0.1]}]}';
-    jest.mocked(FileSystem.readAsStringAsync).mockResolvedValue(source);
-    await expect(readRoomPlanJson("file:///capture.json")).resolves.toBe(source);
-    expect(FileSystem.readAsStringAsync).toHaveBeenCalledWith("file:///capture.json");
+    expect(parseRoomPlanJson(source)).toBe(source);
   });
 
-  it("reports a missing export URL", async () => {
-    await expect(readRoomPlanJson(undefined)).rejects.toThrow("did not return a JSON file URL");
-  });
-
-  it("reports file read and invalid JSON failures", async () => {
-    jest.mocked(FileSystem.readAsStringAsync).mockResolvedValue("not json");
-    await expect(readRoomPlanJson("/capture.json")).rejects.toThrow("Could not read or parse");
+  it("reports invalid JSON", () => {
+    expect(() => parseRoomPlanJson("not json")).toThrow("Invalid RoomPlan JSON");
   });
 });
