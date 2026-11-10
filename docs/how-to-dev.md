@@ -27,10 +27,11 @@ For direct Python development, open another PowerShell window at the repository 
 ```powershell
 cd backend
 py -3 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+.\\.venv\\Scripts\\python.exe -m pip install --upgrade pip
+.\\.venv\\Scripts\\python.exe -m pip install -e ".[dev]"
 ```
+
+Calling the virtual environment's Python directly avoids PowerShell's script execution policy; activation is not required.
 
 Or use Docker Desktop from the repository root; no local Python install is needed to run the API or backend tests:
 
@@ -74,8 +75,7 @@ With the Python environment created during setup:
 
 ```powershell
 cd backend
-.\.venv\Scripts\Activate.ps1
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+.\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Or, from the repository root, use Docker Compose:
@@ -94,8 +94,8 @@ npm run lint
 npm run typecheck
 npm test -- --ci
 
-# From backend, with its virtual environment active
-python -m pytest
+# From backend
+.\\.venv\\Scripts\\python.exe -m pytest
 
 # Or run backend tests in Docker from the repository root
 docker compose --profile checks run --build --rm tests
