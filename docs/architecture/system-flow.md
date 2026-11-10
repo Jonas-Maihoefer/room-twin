@@ -1,10 +1,25 @@
 # System flow
 
-The chosen MVP flow is described in [the system architecture](architecture.md):
+The [system architecture](architecture.md) defines the intended MVP path:
 
-1. The custom iOS app starts an Apple RoomPlan capture.
-2. RoomPlan exports structured JSON (and optionally USDZ) to a local file.
-3. An explicit, versioned adapter will send scan data to the backend API.
-4. The backend will replace selected furniture and produce a GLB for download/share.
+1. The Room Twin iOS app starts an Apple RoomPlan capture.
+2. RoomPlan provides structured source data.
+3. A versioned API adapter maps the source data to the backend contract.
+4. The app uploads the payload directly to the backend.
+5. The backend validates geometry and coordinates, then selects, scales, and places replacement furniture.
+6. The backend generates a GLB scene.
+7. The app downloads or shares the result.
 
-Only steps 1–2 are represented in the mobile foundation, and they still require a real device test. The backend currently validates an opaque, provisional v1 source envelope and returns a stub response. Steps 3–4 are not yet implemented. See [the Windows guide](../development/windows.md) for build and verification steps.
+## Current implementation
+
+The mobile foundation currently covers RoomPlan capture and local source JSON export, inspection, and sharing. It does not yet map the source into the API contract or upload it.
+
+The backend currently exposes a health endpoint and validates a provisional versioned source envelope, returning a stub response. It does not persist or transform scan content. Furniture replacement and GLB generation are not implemented. Native RoomPlan export remains to be checked with an EAS development build on a physical compatible device. See the [Windows guide](../development/windows.md) for build and device steps.
+
+## Responsibilities
+
+- **iOS app:** native capture, source data handling, eventual API call, progress and error display, and result delivery.
+- **Backend:** input validation, geometry and transform handling, asset selection, and GLB generation.
+- **Asset library:** replacement models; a local library is sufficient for the initial pipeline.
+
+A 3D viewer or editor may follow the MVP. It is outside the first MVP scope.

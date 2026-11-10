@@ -1,15 +1,21 @@
 # Room Twin
 
-Room Twin untersucht, wie aus einem indoor-LiDAR-Raumscan ein weiterverarbeitbares 3D-Modell entsteht. Der gewählte MVP-Ablauf ist eine eigene iOS-App mit Apple RoomPlan, strukturierte Scandaten an ein Backend, Möbelersatz und GLB-Download/Teilen.
+Room Twin turns indoor LiDAR scans into reusable 3D room models. Its chosen MVP uses a custom iOS app with Apple RoomPlan, a backend pipeline for furniture replacement, and GLB download and sharing.
 
-## Dokumentation
+## Chosen architecture
 
-- [Systemarchitektur](docs/architecture/architecture.md)
-- [Technologie- und Validierungsstand](docs/architecture/tech-stack.md)
-- [How to dev: Setup und täglicher Ablauf](docs/how-to-dev.md)
-- [Windows-Setup, EAS-Signierung und Geräteprüfung](docs/development/windows.md)
-- [Dokumentationsübersicht](docs/README.md)
+The scan runs inside the Room Twin app on a supported LiDAR iPhone or iPad. The app will send structured scan data directly to a backend API. The backend will replace selected furniture with positioned 3D assets and return a GLB file. An in-app viewer or editor is outside the first MVP.
 
-## Aktueller Stand
+## Current implementation status
 
-Das Repository enthält ein Expo-Grundgerüst mit einem isolierten RoomPlan-Adapter und Scanbildschirm sowie ein FastAPI-Backend mit Health-Check und vorläufigem Scan-API-Vertrag. Der native Scanexport muss noch in einem EAS-Entwicklungsbuild auf einem physischen LiDAR-Gerät geprüft werden. Möbelersatz und GLB-Erzeugung sind noch nicht implementiert.
+This pull request establishes the Expo iOS app foundation, a RoomPlan capture and source JSON inspection path, and a FastAPI health endpoint with a provisional scan-ingestion stub. The native RoomPlan export still needs validation in an EAS development build on a physical device. Scan conversion, upload, furniture replacement, and GLB generation are not implemented yet.
+
+## Documentation
+
+- [System architecture](docs/architecture/architecture.md)
+- [System flow and implementation boundary](docs/architecture/system-flow.md)
+- [Technology stack and validation](docs/architecture/tech-stack.md)
+- [How to dev: setup and daily routine](docs/how-to-dev.md)
+- [Windows setup, EAS signing, and device verification](docs/development/windows.md)
+- [RoomPlan and end-to-end validation plan](docs/testing/ios-roomplan-validation.md)
+- [Documentation index](docs/README.md)

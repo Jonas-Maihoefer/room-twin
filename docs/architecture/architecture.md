@@ -1,23 +1,38 @@
 # Chosen system architecture
 
-Room Twin's MVP path is the integrated custom iOS application:
+Room Twin's MVP uses a custom iOS app with Apple RoomPlan and a directly connected backend.
 
-```mermaid
-flowchart LR
-  A[Expo React Native iOS app] --> B[Apple RoomPlan scan]
-  B --> C[Apple structured JSON export]
-  C --> D[Explicit versioned API adapter]
-  D --> E[FastAPI backend]
-  E --> F[Furniture replacement]
-  F --> G[GLB download and share]
-```
+## Intended MVP flow
 
-The implementation begins by proving the native RoomPlan export path. The app runs a RoomPlan capture through an isolated wrapper adapter, receives the exported JSON file URL, reads and displays the source file, and makes it shareable. No scan conversion or backend upload is implied by this first vertical slice.
+1. A user scans a room inside the Room Twin app on a supported LiDAR iPhone or iPad.
+2. The app receives structured RoomPlan data about surfaces, openings, and recognized objects.
+3. A versioned adapter prepares a payload that matches the backend contract. RoomPlan does not define Room Twin's API schema.
+4. The app sends the payload directly to the backend.
+5. The backend validates the input and coordinate systems, processes room geometry, and places suitable 3D assets.
+6. The backend makes a GLB available for the app to download and share.
 
-The backend exposes health plus a deliberately provisional `room-twin.scan-ingest.v1` contract stub. It validates the envelope and returns `accepted-stub`; it does not persist or transform scan content. Asset matching, furniture replacement, scene generation, GLB export, user accounts, and production storage remain later work.
+## Responsibilities
 
-## Source data versus API data
+| Component | Responsibility |
+|---|---|
+| iOS app | Start and finish scans, show progress and errors, prepare and upload data, retrieve and share results |
+| RoomPlan integration | Capture rooms with LiDAR and provide Apple's structured room and object data |
+| API adapter | Map source data into a versioned backend payload while preserving dimensions, categories, transforms, surfaces, and openings |
+| Backend API | Validate uploads, start or perform processing, handle errors, and provide results |
+| Geometry and asset pipeline | Interpret room geometry, select replacement assets, scale and place them, and build a scene |
+| Asset library | Provide suitable 3D models for recognized object categories |
+| Model export | Produce a usable GLB file |
 
-Apple RoomPlan JSON is a native source format whose concrete fields and export behavior must be inspected on-device. `source_payload` in the provisional v1 envelope is an opaque JSON object intended to preserve that source verbatim. It does not assign Room Twin meaning to Apple's fields. A future adapter must version its mapping and demonstrate that dimensions, categories, transforms, surfaces, and openings are retained or explicitly handled before ingestion semantics are finalized.
+## Current implementation boundary
 
-The `expo-roomplan` package is a candidate bridge, not a validated product dependency. Its README describes RoomPlan on iOS 16+, but version 1.2.1's actual podspec and config plugin require iOS 17.0; the project therefore targets iOS 17. Upstream documents a `RoomPlanView` export callback with `sendFileLoc` and `jsonUrl`; published Expo/React Native peer dependencies are wildcards and the package's development environment is Expo 53 / React Native 0.79.1. That does not establish compatibility with every Expo SDK. This repository pins an Expo 53 combination for an initial cloud/device trial; only a successful EAS build and physical-device JSON inspection can validate the path.
+The app foundation in this repository exercises RoomPlan capture, reads the exported source JSON, and displays and shares that file. Its wrapper is isolated behind an adapter. The backend provides a health endpoint and a provisional versioned scan-ingestion envelope; it validates the envelope and returns a stub response without storing or transforming scan content.
+
+The source export and backend payload are separate formats. The actual RoomPlan fields and export behavior must be inspected on-device before defining a mapping. The provisional source payload is opaque and does not assign Room Twin meaning to Apple's fields. This foundation does not implement API upload from the app, furniture matching, geometry processing, GLB generation, or production storage.
+
+The Expo RoomPlan wrapper is a candidate integration. Expo Go does not include this native module. The app targets iOS 17 based on the wrapper's podspec and config plugin, but only a successful EAS build and physical-device JSON inspection can validate the path.
+
+## MVP scope and constraints
+
+The first MVP demonstrates scan in the app, structured data transfer, direct backend upload, at least one correctly scaled and positioned replacement asset, GLB generation, and download or sharing in the app. A 3D viewer or editor is a later extension, not a requirement for this MVP.
+
+The API schema, error model, upload limits, authentication, temporary storage, and result retrieval behavior remain to be designed. Indoor scans can contain sensitive information; use secured transfer and do not commit private room captures.
