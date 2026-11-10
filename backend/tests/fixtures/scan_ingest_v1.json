@@ -1,0 +1,12 @@
+{
+  "schema_version": "room-twin.scan-ingest.v1",
+  "source_format": "apple-roomplan-json",
+  "source_payload": {
+    "fixture_notice": "Synthetic contract example, not an Apple RoomPlan capture.",
+    "capturedRoom": {
+      "walls": [],
+      "objects": [],
+      "openings": []
+    }
+  }
+}

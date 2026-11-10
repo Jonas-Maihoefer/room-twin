@@ -1,37 +1,10 @@
-# System-Flows – zwei getrennte Alternativen
+# System flow
 
-**Architekturentscheidung noch offen.** Die folgenden Flows sind Vorschläge, keine freigegebene Architektur. [Entscheidungsstand](decision.md) · [Dokumentationsübersicht](../README.md)
+The chosen MVP flow is described in [the system architecture](architecture.md):
 
-## Architektur 1 – Externe Scanner-App
+1. The custom iOS app starts an Apple RoomPlan capture.
+2. RoomPlan exports structured JSON (and optionally USDZ) to a local file.
+3. An explicit, versioned adapter will send scan data to the backend API.
+4. The backend will replace selected furniture and produce a GLB for download/share.
 
-[Ausführliche Beschreibung](option-1-external-scanner.md)
-
-```mermaid
-flowchart TD
- A[Vorhandene iOS-Scanner-App] --> B[Export JSON / optional USDZ]
- B --> C[Manueller Upload / Import]
- C --> D[Backend / Geometrieverarbeitung]
- E[Asset-Bibliothek] --> D
- D --> F[GLB oder andere abgestimmte Ausgabe]
- F --> G[Download / Speicherung]
-```
-
-**Offene Voraussetzung:** Ist der JSON-Export wirklich kostenlos und für die Pipeline brauchbar? Siehe [Handytests](../testing/handytests.md) und [PDF](../../test/architecture%20research/Room_Twin_Handytests_RoomPlan_JSON-1.pdf).
-
-## Architektur 2 – Eigene integrierte App
-
-[Ausführliche Beschreibung](option-2-integrated-ios-app.md)
-
-```mermaid
-flowchart TD
- A[Eigene iOS-App mit RoomPlan] --> B[Direkte Übertragung der Scan-Daten]
- B --> C[Backend / Geometrieverarbeitung]
- D[Asset-Bibliothek] --> C
- C --> E[3D-Modell]
- E --> F[In-App Download / Teilen]
- E -. optional später .-> G[3D-Viewer und Editor]
-```
-
-**Offene Voraussetzung:** Kompatibler native RoomPlan-Build, Signierung und Datentransfer müssen auf einem echten Gerät geprüft werden.
-
-Beide Varianten können eine gemeinsame Verarbeitungspipeline verwenden; der [Technologiestack ist noch nicht festgelegt](tech-stack.md).
+Only steps 1–2 are represented in the mobile foundation, and they still require a real device test. The backend currently validates an opaque, provisional v1 source envelope and returns a stub response. Steps 3–4 are not yet implemented. See [the Windows guide](../development/windows.md) for build and verification steps.

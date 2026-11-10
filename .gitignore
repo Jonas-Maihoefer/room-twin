@@ -1,0 +1,33 @@
+# JavaScript / Expo
+node_modules/
+.npm-cache/
+.expo/
+.expo-cli-home/
+dist/
+web-build/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.p8
+*.p12
+*.mobileprovision
+credentials.json
+
+# Scan captures and generated native/build outputs
+*.usdz
+*.usd
+*.roomplan.json
+scan-captures/
+ios/
+android/
+build/

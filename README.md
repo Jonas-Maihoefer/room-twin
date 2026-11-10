@@ -1,24 +1,29 @@
 # Room Twin
 
-> **Status: Architektur noch offen.** Die Architektur muss mit dem **Betreuer** abgestimmt werden. Die hier beschriebenen Wege sind Alternativen, keine bereits beschlossenen Implementierungen.
+Room Twin's MVP path is a custom iOS app using Apple RoomPlan, structured scan data sent directly to a backend API, furniture replacement, and a downloadable/shareable GLB. The repository is the first executable foundation for that path.
 
-Room Twin untersucht, wie aus einem indoor-LiDAR-Raumscan ein weiterverarbeitbares 3D-Modell entsteht. Die Verarbeitung könnte erkannte Möbel anhand semantischer Raumdaten durch passende 3D-Assets ersetzen.
+## Repository layout
 
-## Zwei mögliche Architekturen
+- `apps/mobile/` — TypeScript Expo app and isolated RoomPlan adapter.
+- `backend/` — FastAPI health endpoint and versioned scan-ingestion seam.
+- `docs/architecture/` — chosen system flow, technology choices, and payload boundary.
+- `docs/development/windows.md` — Windows setup, EAS signing, device workflow, and troubleshooting.
 
-| | Variante 1 | Variante 2 |
-|---|---|---|
-| Scanner | Bestehende iOS-Scanner-App | Eigene iOS-App mit Apple RoomPlan |
-| Datentransfer | Export und manueller Upload | Direkte Übertragung zum Backend |
-| Fokus | Verarbeitungspipeline möglichst früh entwickeln | Integriertes Nutzererlebnis |
-| Status | Offen | Offen |
+## Quick start
 
-- [Architektur 1: Externe Scanner-App](docs/architecture/option-1-external-scanner.md)
-- [Architektur 2: Eigene iOS-App](docs/architecture/option-2-integrated-ios-app.md)
-- [Vergleich und Entscheidungspunkte](docs/architecture/decision.md)
-- [Handytests: Warum sie benötigt werden](docs/testing/handytests.md)
-- [Gesamte Dokumentationsübersicht](docs/README.md)
+See [Windows development setup](docs/development/windows.md) for prerequisites and exact PowerShell commands. In brief, install Node.js 20 LTS, Python 3.11+, and Docker Desktop with WSL2; then run `npm ci` and `npm run start` in `apps/mobile`, and `python -m venv .venv` followed by the backend setup commands from `backend/`.
 
-## Nächster Schritt
+The RoomPlan module is native and does not run in Expo Go. Start with a signed EAS development build and a physical LiDAR-capable iPhone/iPad. Ordinary JavaScript edits use Fast Refresh; native dependency/config changes require a new development build.
 
-Ein [Handytest](docs/testing/handytests.md) prüft, ob Drittanbieter-Apps **kostenlos verwertbares RoomPlan-JSON** exportieren. Das [Testprotokoll liegt als PDF im Repository](test/architecture%20research/Room_Twin_Handytests_RoomPlan_JSON-1.pdf). Diese Ergebnisse unterstützen das Gespräch mit dem Betreuer; sie ersetzen die Entscheidung nicht.
+## Verification status
+
+| Check | Status |
+|---|---|
+| Source, app configuration, docs, and backend scaffold | Implemented in this foundation |
+| Local npm / Python checks | Pending in this environment (see PR check results) |
+| GitHub Actions | Runs app lint/typecheck/tests and backend pytest on pull requests |
+| EAS cloud iOS development build | Not attempted; requires Expo access and Apple signing/team setup |
+| On-device RoomPlan JSON export | Pending physical LiDAR device verification |
+| Scan-to-furniture-to-GLB product flow | Out of scope for this foundation |
+
+RoomPlan JSON is Apple-generated source data. The versioned Room Twin API contract is separate and provisional; no conversion that could discard source semantics is implemented here.
