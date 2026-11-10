@@ -1,5 +1,6 @@
 # JavaScript / Expo
 node_modules/
+.npm/
 .npm-cache/
 .expo/
 .expo-cli-home/
@@ -9,10 +10,13 @@ web-build/
 
 # Python
 .venv/
+venv/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
 *.py[cod]
+*.egg-info/
+build/
 
 # Local configuration and credentials
 .env
