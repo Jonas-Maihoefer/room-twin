@@ -58,7 +58,7 @@ After installation, connect the phone and development computer to the same trust
 
 ## Scan verification and iteration
 
-The native RoomPlan bridge requires the EAS development build; Expo Go does not include it. Test on a physical device with LiDAR and iOS 16 or newer. Grant camera access, start and finish a scan, then verify the JSON is displayed and can be shared. Record device model, iOS version, build URL, export outcome, and representative structure fields without committing room captures or personal room images. Confirm dimensions, categories, transforms, surfaces, and openings are represented in the export before defining a Room Twin conversion.
+The native RoomPlan bridge requires the EAS development build; Expo Go does not include it. The `expo-roomplan` 1.2.1 podspec requires iOS 17 or newer. Test on a physical device with LiDAR. Grant camera access, start and finish a scan, then verify the JSON is displayed and can be shared. Record device model, iOS version, build URL, export outcome, and representative structure fields without committing room captures or personal room images. Confirm dimensions, categories, transforms, surfaces, and openings are represented in the export before defining a Room Twin conversion.
 
 JavaScript and styles use Metro Fast Refresh. Changes to Expo config, native dependencies, config plugins, bundle settings, or iOS permissions require a new EAS development build. Windows supports the ordinary workflow; macOS/Xcode becomes useful if the wrapper needs native Swift debugging, unsupported native project changes, simulator-only diagnosis, or local iOS compilation.
 

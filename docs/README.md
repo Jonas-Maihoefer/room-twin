@@ -4,4 +4,5 @@
 - [Architecture decision](architecture/decision.md)
 - [Technology stack and validation](architecture/tech-stack.md)
 - [System flow and implementation boundary](architecture/system-flow.md)
+- [How to dev: setup and daily routine](how-to-dev.md)
 - [Windows developer setup and device verification](development/windows.md)
