@@ -10,6 +10,7 @@ import RoomPlan
 import ARKit
 
 struct ScannerView: UIViewRepresentable {
+    let manager: ScanManager
     
     func makeUIView(context: Context) -> RoomCaptureView {
         let ars = ARSession()
@@ -17,6 +18,10 @@ struct ScannerView: UIViewRepresentable {
         
         let konfig = RoomCaptureSession.Configuration()
         ansicht.captureSession.run(configuration: konfig)
+        
+        manager.rcv = ansicht
+        ansicht.delegate = manager
+        
         
         return ansicht
         

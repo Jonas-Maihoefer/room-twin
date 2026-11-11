@@ -11,10 +11,36 @@ import ARKit
 
 struct ContentView: View {
     @State private var amscannen = false
+    @StateObject private var manager = ScanManager()
     let supp = RoomCaptureSession.isSupported
     
     var body: some View {
-        if !amscannen {
+        
+        if let raum = manager.ergebnis {
+            VStack {
+                Text("Scan fertig")
+                Text("Wände= \(raum.walls.count)")
+                Text("Türen= \(raum.doors.count)")
+                Text("Fenster= \(raum.windows.count)")
+                Text("Objekte= \(raum.objects.count)")
+                Button("Neu Scannen") {
+                    manager.ergebnis = nil
+                    amscannen = false
+                }
+            }
+            .padding()
+        } else if amscannen {
+            VStack {
+                ScannerView(manager: manager)
+                Button("Abbrechen", role: .destructive) {
+                    amscannen = false
+                }
+                Button("Fertig") {
+                    manager.stopScan()
+                }
+            }
+            .padding()
+        } else {
             VStack {
                 Text("RoomScanner")
                     .font(.largeTitle)
@@ -28,17 +54,7 @@ struct ContentView: View {
                 }
             }
             .padding()
-        } else {
-            VStack {
-                ScannerView()
-                Button("Abbrechen") {
-                    amscannen = false
-                }
-            }
-            .padding()
         }
-        
-        
     }
 }
 
