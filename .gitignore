@@ -35,3 +35,10 @@ scan-captures/
 ios/
 android/
 build/
+
+# Xcode
+.DS_Store
+xcuserdata/
+DerivedData/
+*.xcuserstate
+build/
