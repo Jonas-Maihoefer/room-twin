@@ -13,6 +13,7 @@ import Combine
 
 class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     
+    @Published var usdzURL: URL?
     @Published var ergebnis: CapturedRoom?
     
     weak var rcv: RoomCaptureView?
@@ -31,6 +32,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     
     func captureView(didPresent processedResult: CapturedRoom, error: Error?) {
         ergebnis = processedResult
+        exportieren()
     }
 
     func encode(with coder: NSCoder) {
@@ -39,4 +41,20 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     func stopScan() {
         rcv?.captureSession.stop()
     }
+    
+    func exportieren(){
+        if let raum = ergebnis {
+            let ordner = URL.documentsDirectory
+            let datei = ordner.appending(path: "room.usdz")
+            try? FileManager.default.removeItem(at: datei)
+            do {
+                try raum.export(to: datei)
+                usdzURL = datei
+                
+            } catch {
+                print("Fehler: \(error)")
+            }
+        }
+    }
+    
 }
