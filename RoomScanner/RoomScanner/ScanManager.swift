@@ -15,6 +15,8 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     
     @Published var usdzURL: URL?
     @Published var ergebnis: CapturedRoom?
+    @Published var exportDateien: [URL] = []
+    
     
     weak var rcv: RoomCaptureView?
     
@@ -43,13 +45,41 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     }
     
     func exportieren(){
+        
         if let raum = ergebnis {
-            let ordner = URL.documentsDirectory
-            let datei = ordner.appending(path: "room.usdz")
-            try? FileManager.default.removeItem(at: datei)
+            let formatierer = DateFormatter()
+            formatierer.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+            let zeit = formatierer.string(from: Date())
+            let dokumente = URL.documentsDirectory
+            let scanOrdner = dokumente.appending(path: "scan_\(zeit)")
+            
+            let usdzDatei = scanOrdner.appending(path: "room.usdz")
+            let jsonDatei = scanOrdner.appending(path: "room.json")
+            let metaDatei = scanOrdner.appending(path: "metadata.json")
+
             do {
-                try raum.export(to: datei)
-                usdzURL = datei
+                try FileManager.default.createDirectory(at: scanOrdner, withIntermediateDirectories: true)
+                try raum.export(to: usdzDatei)
+                
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = .prettyPrinted
+                let raumDaten = try encoder.encode(raum)
+                try raumDaten.write(to: jsonDatei)
+                
+                let meta = ScanMetadaten(
+                    scanID: "scan_\(zeit)",
+                    datum: zeit,
+                    geraet: UIDevice.current.model,
+                    iosVersion: UIDevice.current.systemVersion,
+                    einheit: "Meter",
+                    koordinatensystem: "ARKit, y-Achse nach oben",
+                    dateien: ["room.usdz", "room.json", "metadata.json"]
+                )
+                let metaDaten = try encoder.encode(meta)
+                try metaDaten.write(to: metaDatei)
+                
+                usdzURL = usdzDatei
+                exportDateien = [usdzDatei, jsonDatei, metaDatei]
                 
             } catch {
                 print("Fehler: \(error)")
@@ -57,4 +87,14 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
         }
     }
     
+}
+
+struct ScanMetadaten: Codable {
+    let scanID: String
+    let datum: String
+    let geraet: String
+    let iosVersion: String
+    let einheit: String
+    let koordinatensystem: String
+    let dateien: [String]
 }

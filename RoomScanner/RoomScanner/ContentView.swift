@@ -29,7 +29,11 @@ struct ContentView: View {
                     vorschau = manager.usdzURL
                 }
                 .disabled(manager.usdzURL == nil)
+                ShareLink(items: manager.exportDateien) {
+                    Text("Teilen")
+                }
                 Button("Neu Scannen") {
+                    manager.exportDateien = []
                     manager.ergebnis = nil
                     amscannen = false
                     manager.usdzURL = nil
