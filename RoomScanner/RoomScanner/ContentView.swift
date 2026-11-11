@@ -6,16 +6,38 @@
 //
 
 import SwiftUI
+import RoomPlan
 
 struct ContentView: View {
+    @State private var amscannen = false
+    let supp = RoomCaptureSession.isSupported
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        if !amscannen {
+            VStack {
+                Text("RoomScanner")
+                    .font(.largeTitle)
+                Button("Scan Starten") {
+                    amscannen = true
+                }
+                .disabled(!supp)
+                if !supp {
+                    Text("iPhone-Modell nicht unterstützt")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding()
+        } else {
+            VStack {
+                Text("Hier kommt Scanner hin")
+                Button("Abbrechen") {
+                    amscannen = false
+                }
+            }
+            .padding()
         }
-        .padding()
+        
+        
     }
 }
 
