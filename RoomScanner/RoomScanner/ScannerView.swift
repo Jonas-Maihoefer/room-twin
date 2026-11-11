@@ -19,6 +19,7 @@ struct ScannerView: UIViewRepresentable {
         
         let konfig = RoomCaptureSession.Configuration()
         ansicht.captureSession.run(configuration: konfig)
+        manager.startSammeln()
         
         manager.rcv = ansicht
         ansicht.delegate = manager

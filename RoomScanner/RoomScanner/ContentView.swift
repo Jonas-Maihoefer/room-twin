@@ -32,6 +32,10 @@ struct ContentView: View {
                 ShareLink(items: manager.exportDateien) {
                     Text("Teilen")
                 }
+                if let ordner = manager.scanOrdner,
+                   let link = URL(string: "shareddocuments://\(ordner.path(percentEncoded: true))") {
+                    Link("In Dateien öffnen", destination: link)                            
+                }
                 Button("Neu Scannen") {
                     manager.exportDateien = []
                     manager.ergebnis = nil
@@ -46,12 +50,10 @@ struct ContentView: View {
                 ScannerView(manager: manager)
                 Button("Abbrechen", role: .destructive) {
                     amscannen = false
+                    manager.stopSammeln()
                 }
                 Button("Fertig") {
                     manager.stopScan()
-                }
-                Button("Tiefe Prüfen") {
-                    manager.pruefeTiefe()
                 }
             }
             .padding()
