@@ -7,6 +7,7 @@
 
 import SwiftUI
 import RoomPlan
+import ARKit
 
 struct ContentView: View {
     @State private var amscannen = false
@@ -29,7 +30,7 @@ struct ContentView: View {
             .padding()
         } else {
             VStack {
-                Text("Hier kommt Scanner hin")
+                ScannerView()
                 Button("Abbrechen") {
                     amscannen = false
                 }
