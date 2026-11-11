@@ -15,6 +15,7 @@ struct ScannerView: UIViewRepresentable {
     func makeUIView(context: Context) -> RoomCaptureView {
         let ars = ARSession()
         let ansicht = RoomCaptureView(frame: .zero, arSession: ars)
+        manager.arSession = ars
         
         let konfig = RoomCaptureSession.Configuration()
         ansicht.captureSession.run(configuration: konfig)

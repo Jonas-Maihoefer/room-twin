@@ -17,7 +17,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     @Published var ergebnis: CapturedRoom?
     @Published var exportDateien: [URL] = []
     
-    
+    weak var arSession: ARSession?
     weak var rcv: RoomCaptureView?
     
     override init(){
@@ -84,6 +84,19 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
             } catch {
                 print("Fehler: \(error)")
             }
+        }
+    }
+    func pruefeTiefe() {
+        guard let frame = arSession?.currentFrame else {
+            print("noch kein Frame da")
+            return
+        }
+        if let tiefe = frame.sceneDepth {
+            let breite = CVPixelBufferGetWidth(tiefe.depthMap)
+            let hoehe = CVPixelBufferGetHeight(tiefe.depthMap)
+            print("Tiefe da: \(breite) x \(hoehe)")
+        } else {
+            print("keine Tiefe")
         }
     }
     

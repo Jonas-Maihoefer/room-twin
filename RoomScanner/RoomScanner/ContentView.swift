@@ -50,6 +50,9 @@ struct ContentView: View {
                 Button("Fertig") {
                     manager.stopScan()
                 }
+                Button("Tiefe Prüfen") {
+                    manager.pruefeTiefe()
+                }
             }
             .padding()
         } else {
