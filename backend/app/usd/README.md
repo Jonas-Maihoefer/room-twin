@@ -55,3 +55,63 @@ The output is structurally inspected by OpenUSD and contains real referenced
 mesh prims, but this change does not render images or establish perceptual
 similarity for every asset. Mesh/material appearance and more advanced axis
 conversion remain appropriate follow-up validation as the catalog grows.
+
+## Build a standalone USDZ
+
+Install the backend and developer dependencies from `backend/`:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+The offline CLI reads a RoomPlan USDZ and its paired JSON export, applies the
+backend-owned asset catalog, validates the result, and writes a self-contained
+USDZ and a versioned JSON report:
+
+```bash
+python -m app.usd.cli replace \
+  --usdz testdata/room.usdz \
+  --json testdata/room.json \
+  --metadata testdata/metadata.json \
+  --output output/testscan-enhanced.usdz
+```
+
+`--metadata` is optional. By default, the catalog is
+`backend/assets/catalog.json`; pass `--catalog assets/catalog.json` to select
+another manifest. The output parent directory is created as needed. The report
+defaults to `OUTPUT.report.json` next to the USDZ and has schema version
+`room-twin.replacement-report.v1`; it lists deterministic per-object UUIDs,
+categories, attributes, statuses, selected catalog paths, warning messages,
+counts, and the final validation result. Existing output files are preserved;
+use `--force` to replace both outputs.
+
+The CLI exits with status zero only after packaging, reopening the USDZ,
+checking dependency resolution, and writing the report. Invalid inputs,
+catalogs, output paths, packaging failures, or failed validation return a
+nonzero status and print a diagnostic to stderr. Library callers can use
+`process_roomplan()` to create the editable workspace, call `package_usdz()` to
+create the package, and call `validate_usdz()` independently. The library caller
+owns the returned workspace lifetime; the CLI removes its temporary workspace
+after packaging.
+
+Packaging uses OpenUSD `UsdUtils.CreateNewUsdzPackage` so referenced layers,
+models, and their discovered nested dependencies are localized using USDZ's
+format rules. The packager writes to a temporary package, validates it, and
+publishes it atomically. It does not modify the source scan or flatten the
+scene. Validation opens the package as a fresh stage, requires a default prim,
+checks OpenUSD dependency resolution, rejects external absolute layer paths,
+and verifies the planned replacement/preserved meshes.
+
+Run the backend suite with:
+
+```bash
+python -m pytest
+```
+
+The test suite includes the committed RoomPlan scan, architecture geometry and
+transform comparisons, report checks, package dependency checks, and a fresh
+process reopening the USDZ after the CLI workspace has been removed. The
+`usdchecker` executable is not available in the current development environment;
+the checks use the installed OpenUSD Python APIs. Apple Quick Look validation is
+not performed by the automated backend suite. OpenUSD structural validity does
+not establish visual appearance or Quick Look compatibility.

@@ -58,8 +58,6 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
     plan = build_replacement_plan(scan, inventory, catalog)
     dependencies: list[Path] = []
     for item in plan:
-        if item.model is None:
-            continue
         object_prims = [stage.GetPrimAtPath(path) for path in item.match.layer.composed_prim_paths]
         object_prims = [prim for prim in object_prims if prim]
         if len(object_prims) != 1:
@@ -70,6 +68,8 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
         # Author identity at the exact composed object path for downstream tools.
         obj.SetCustomDataByKey("UUID", item.match.uuid)
         obj.SetCustomDataByKey("Category", item.match.source.category)
+        if item.model is None:
+            continue
         meshes = [prim for prim in Usd.PrimRange(obj) if prim.IsA(UsdGeom.Mesh)]
         if not meshes:
             raise ReplacementError(f"no placeholder mesh in composed object {obj.GetPath()}")
