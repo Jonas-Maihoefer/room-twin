@@ -3,7 +3,7 @@
 ## Decision
 
 - **iOS frontend:** a native **Swift + SwiftUI** project with **Apple RoomPlan** for room geometry and semantic furniture recognition, and **ARKit** for the scan session/camera frames.
-- **Processing backend:** **Python + FastAPI**. **OpenUSD via `usd-core`** is the selected foundation for furniture replacement, scene composition, and self-contained USDZ output; processing is **planned, not implemented**.
+- **Processing backend:** **Python + FastAPI**. **OpenUSD via `usd-core`** is the foundation for furniture replacement, scene composition, and self-contained USDZ output; Issue A implements read-only scan and scene inventory plus a validated catalog. Replacement and export remain planned.
 - **3D interchange:** **USDZ → USDZ**. Preserve the source room geometry and replace selected placeholder objects. No GLB conversion/export is required by the MVP.
 - **Backend portability:** the processing design is cross-platform (Windows/Linux), not dependent on executing the macOS/iOS RoomPlan APIs.
 
@@ -15,8 +15,8 @@
 | Scan export | Produce `room.usdz`, `room.json`, and `metadata.json` in metres with ARKit Y-up coordinates | Implemented in `ScanManager.swift` |
 | App–API transport | Authenticate and upload source files, poll/download generated USDZ and report errors | **Not implemented** |
 | FastAPI | Validate/accept uploads, manage processing and result delivery | `GET /health` and provisional JSON-only `POST /scans` stub |
-| OpenUSD processor | Load USDZ, match objects, compose replacement models, preserve architecture, package new USDZ | **Not implemented**; `usd-core` selected but not yet a dependency |
-| Asset catalog | Choose replacement models by RoomPlan category and attributes with safe fallbacks | Apple's example catalog included; no Python matching/placement implemented |
+| OpenUSD foundation | Read-only scan parser and USDZ inventory; later compose replacements and package output | `usd-core` is installed; parser, scene inventory and independent catalog are implemented. Replacement/export remain planned |
+| Asset catalog | Choose replacement models by RoomPlan category and attributes with safe fallbacks | Backend-owned copy of the Apple sample catalog is validated; replacement and placement are not implemented |
 | Result viewer | Preview/share the enhanced USDZ on the iPhone | Quick Look and sharing work for local scan files; backend result integration is planned |
 
 ## Scan bundle is the interface
