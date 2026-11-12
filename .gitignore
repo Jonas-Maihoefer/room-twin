@@ -28,7 +28,6 @@ build/
 credentials.json
 
 # Scan captures and generated native/build outputs
-*.usdz
 *.usd
 *.roomplan.json
 scan-captures/
