@@ -1,7 +1,7 @@
 {
   "schema_version": "room-twin.asset-catalog.v1",
   "catalog_version": 1,
-  "provenance": "Copied from Apple ProvidingCustomModelsForCapturedRoomsAndStructureExports sample RoomPlanCatalog.bundle; mapping follows its generated catalog.plist.",
+  "provenance": "Copied from Apple's public RoomPlan custom-models sample; mapping follows its generated catalog.plist.",
   "models": [
     {
       "category": "storage",

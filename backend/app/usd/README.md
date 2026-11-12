@@ -110,8 +110,9 @@ python -m pytest
 
 The test suite includes the committed RoomPlan scan, architecture geometry and
 transform comparisons, report checks, package dependency checks, and a fresh
-process reopening the USDZ after the CLI workspace has been removed. The
-`usdchecker` executable is not available in the current development environment;
-the checks use the installed OpenUSD Python APIs. Apple Quick Look validation is
-not performed by the automated backend suite. OpenUSD structural validity does
-not establish visual appearance or Quick Look compatibility.
+process reopening the USDZ after the CLI workspace has been removed. The suite
+uses OpenUSD Python APIs and does not invoke a renderer or the `usdchecker`
+executable. Apple Quick Look validation is not performed by the automated
+backend suite. OpenUSD structural validity does not establish visual appearance
+or Quick Look compatibility. See the [asset extension guide](../../docs/adding-assets.md)
+for catalog schema and model validation details.

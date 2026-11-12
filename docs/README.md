@@ -1,24 +1,23 @@
 # Room Twin documentation
 
-**Decision:** native Swift/SwiftUI + RoomPlan/ARKit for scanning; Python/FastAPI + OpenUSD (`usd-core`) for planned furniture replacement; **USDZ input and output**. The app-to-backend upload is not yet implemented.
+The current implementation is a native Swift/SwiftUI RoomPlan + ARKit scanner and an offline Python/OpenUSD furniture replacement processor. RoomPlan scan files are currently supplied to the processor as local CLI inputs. Swift-to-FastAPI upload/download is planned and is not implemented.
 
 ## Architecture
 
-- [Architecture](architecture/architecture.md) — selected components, source data, ownership, and API boundaries.
-- [System flow](architecture/system-flow.md) — current offline workflow versus planned FastAPI/processing path.
-- [Technology stack](architecture/tech-stack.md) — chosen tools, formats, implementation status, and compatibility notes.
+- [Architecture](architecture/architecture.md) — components, ownership, data and API boundaries.
+- [System flow](architecture/system-flow.md) — implemented offline path and planned transport.
+- [Technology stack](architecture/tech-stack.md) — versions, formats and status.
 
 ## Development
 
-- [How to develop](how-to-dev.md) — Swift scanner and backend quick starts; current feature boundary.
-- [Windows backend development](development/windows.md) — Python, FastAPI, tests, and offline USDZ fixture development only.
+- [Development quick start](how-to-dev.md) — iOS and backend setup.
+- [Windows backend guide](development/windows.md) — Windows setup, CLI, tests and Docker.
+- [Adding backend assets](../backend/docs/adding-assets.md) — catalog schema, model constraints, validation and licensing.
+- [Backend USD processor](../backend/app/usd/README.md) — processing and packaging details.
 
 ## Verification
 
-- [RoomPlan capture and USDZ pipeline validation](testing/ios-roomplan-validation.md) — completed real-device capture and outstanding integration checks.
+- [RoomPlan and USDZ validation](testing/ios-roomplan-validation.md) — automated checks and manual viewer limits.
+- [Furniture placement diagnostic](../backend/docs/furniture-placement-diagnostic.md) — geometry measurements and placement regression context.
 
-## Source locations
-
-The native app lives in [`../RoomScanner/`](../RoomScanner/) (sourced from the `roomplanarkitapp` branch). The Python backend is in [`../backend/`](../backend/). Apple's [custom-models sample](../ProvidingCustomModelsForCapturedRoomsAndStructureExports/) is retained as a design reference and asset library, not as an active backend service.
-
-The obsolete Expo/React Native `apps/` directory and its mobile build workflow have been removed. The documented FastAPI upload and enhanced USDZ download are **future work**, not features of the existing `POST /scans` stub.
+The native app is in [RoomScanner](../RoomScanner/). The Python backend and its independent catalog are in [backend](../backend/). The obsolete Apple sample project is not part of this repository.

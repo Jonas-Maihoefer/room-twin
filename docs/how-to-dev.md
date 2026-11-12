@@ -1,47 +1,55 @@
 # Development quick start
 
-There are **two independent development environments**: a **native Swift iOS scanner** built with Xcode on a Mac, and a **Python/FastAPI backend** developed on Windows, Linux or macOS. The Python backend can use existing real scan fixtures without an iPhone.
+Room Twin has two independent parts: a native Swift scanner and an offline Python/OpenUSD processor. The processor currently receives the RoomPlan export as local CLI files. The Swift app does not upload to FastAPI or download the processed result.
 
-## 1. Native scanner (Mac + compatible LiDAR device)
+## Native scanner
 
-1. Open [`RoomScanner/RoomScanner.xcodeproj`](../RoomScanner/RoomScanner.xcodeproj) with Xcode.
-2. Select the `RoomScanner` app target, choose your Apple signing team and a compatible **LiDAR-capable iPhone/iPad**, and build/run the app.
-3. Grant camera access, start/finish a RoomPlan scan, preview the output using Quick Look or share the export files.
-4. The current Swift `ScanManager` saves `room.usdz`, `room.json` and `metadata.json` into an on-device scan directory; it also collects optional JPEG frames while scanning.
+On macOS with Xcode and a compatible LiDAR iPhone/iPad:
 
-**Status:** the app already produced the authentic example in [`backend/testdata/`](../backend/testdata/). The app **does not yet upload to FastAPI or download a processed USDZ**. iOS development and code signing require Xcode; there is no Expo/EAS workflow.
+1. Open RoomScanner/RoomScanner.xcodeproj in Xcode.
+2. Select the RoomScanner app target, choose a signing team and compatible device, then build and run.
+3. Grant camera access, perform a RoomPlan scan, and preview or share the local USDZ export.
 
-## 2. Backend (Windows, Linux or macOS)
+The scanner exports room.usdz, room.json and metadata.json. It may also record JPEG frames; the replacement CLI does not use them.
 
-From the repository root:
+## Python backend
+
+Requires 64-bit CPython 3.12. From the repository root:
 
 ~~~bash
 cd backend
 python -m venv .venv
 ~~~
 
-Activate the virtual environment (on Windows PowerShell, run `.\.venv\Scripts\Activate.ps1`; on macOS/Linux, run `source .venv/bin/activate`), then:
+Install dependencies with the virtual environment's Python. On Windows PowerShell:
 
-~~~bash
-python -m pip install -e ".[dev]"
-python -m pytest
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+~~~powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 ~~~
 
-Open `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/docs`. The current `POST /scans` validates a **JSON-only stub envelope** and returns `accepted-stub`; it is not the future upload service.
+On Linux:
 
-For Windows-specific commands and Docker-based test execution, see [Windows backend development](development/windows.md). The planned replacement processor will read `backend/testdata/room.usdz` together with `room.json` and use `usd-core` to create an enhanced USDZ, preserving the original room geometry. **That processor is not implemented yet.**
+~~~bash
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+~~~
 
-## 3. Working on the replacement pipeline
+The project pins usd-core==26.11. Run the real scan through the offline CLI:
 
-- Use the real [`backend/testdata/`](../backend/testdata/) bundle as the initial offline fixture.
-- See the [architecture invariants](architecture/architecture.md) for UUID matching, world-space transforms, preservation of openings and safe fallback behavior.
-- The [Apple sample project](../ProvidingCustomModelsForCapturedRoomsAndStructureExports/) contains reference catalog rules and starter `.usdc` models; it cannot be run as the Python backend.
-- Do not claim the future FastAPI file upload or enhanced USDZ export is working until tested. Test the created USDZ with an independent 3D viewer and on iOS.
-- Keep personal room scans and camera frames private; only use approved test fixtures.
+~~~bash
+python -m app.usd.cli replace \
+  --usdz testdata/room.usdz \
+  --json testdata/room.json \
+  --metadata testdata/metadata.json \
+  --output output/testscan-enhanced.usdz
+~~~
 
-## 4. Before a PR
+Metadata is optional. The default catalog is assets/catalog.json; pass --catalog path/to/catalog.json for another supported manifest. The default report is output/testscan-enhanced.report.json. Existing output pairs are protected; --force replaces both. The command returns a nonzero exit code and writes a diagnostic to stderr on invalid input or failed packaging/validation.
 
-Run the backend tests (`python -m pytest` or the Docker Compose test profile), document the changed USD geometry with regression tests once the processor exists, and have iOS changes built and verified on a compatible device. The current CI validates only the Python backend.
+Run the backend suite from backend/ with python -m pytest. The tests include synthetic geometry cases and the real scan integration path. The output report contains package and geometry diagnostics. For Docker, Windows, validation and model authoring, see the [Windows backend guide](development/windows.md), [verification guide](testing/ios-roomplan-validation.md), and [asset guide](../backend/docs/adding-assets.md).
 
-See [RoomPlan/end-to-end verification](testing/ios-roomplan-validation.md).
+## API scaffold
+
+The API exposes GET /health and a JSON-only POST /scans stub. That stub is not a file upload, persistence layer, replacement processor or result download service. Swift-to-FastAPI integration remains planned.
+
+Only use scan fixtures approved for repository use. Do not commit private room layouts or camera frames.

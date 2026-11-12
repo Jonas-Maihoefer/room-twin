@@ -1,42 +1,54 @@
 # Room Twin
 
-Room Twin turns LiDAR room scans into editable, reusable 3D room scenes. The selected architecture is **a native Swift/SwiftUI iOS scanner (RoomPlan + ARKit)** and **a Python/FastAPI backend using OpenUSD (`usd-core`)** to replace RoomPlan furniture placeholders with detailed assets. **USDZ is the scan input and final 3D output.** A GLB export pipeline is no longer part of the MVP.
+Room Twin combines a native Swift/SwiftUI room scanner with an offline Python/OpenUSD furniture replacement pipeline. RoomPlan and ARKit capture the room; the backend accepts the exported USDZ and JSON as local files, replaces supported furniture, and writes a standalone USDZ.
 
-## Architecture
+## Current workflow
 
-1. The native iOS app in [`RoomScanner/`](RoomScanner/) scans a room with Apple RoomPlan and exports `room.usdz`, `room.json`, and `metadata.json`. It can preview the USDZ with Quick Look and share the exported files.
-2. **Planned:** the app uploads the scan bundle to FastAPI. The upload and result-download connection **are not implemented** yet.
-3. **Planned:** the Python backend uses [`usd-core`](https://pypi.org/project/usd-core/) (OpenUSD's `pxr` bindings) to open the source USDZ, match individual furniture by category/attributes/UUID from the JSON, and substitute correctly transformed 3D models without rebuilding the room walls and openings.
-4. **Planned:** the backend packages an enhanced USDZ for the app to download, preview, or share.
+1. The iOS app in [RoomScanner](RoomScanner/) scans with RoomPlan and exports `room.usdz`, `room.json`, and `metadata.json`. It can preview and share local exports with Quick Look.
+2. Run the Python CLI locally with those files. It parses the RoomPlan JSON, matches furniture UUIDs to the USD scene, selects models from the independent backend catalog, applies replacements, and packages a standalone enhanced USDZ and JSON report.
+3. Open the enhanced USDZ in a compatible USDZ viewer.
 
-Apple's [custom-models RoomPlan sample](ProvidingCustomModelsForCapturedRoomsAndStructureExports/) is a **reference implementation and starter model catalog**, not an executable Python backend or a dependency on macOS at runtime. The Python implementation must reproduce the desired behavior with OpenUSD; it cannot directly call Apple's `CapturedRoom.export(modelProvider:)` API.
+The Swift app does **not** upload to FastAPI or download a processed result. `POST /scans` is a JSON validation stub only; it does not receive scan files or run processing. Swift-to-FastAPI upload/download is planned. The active pipeline is USDZ-to-USDZ; GLB conversion is not used.
 
-## What works today
+## What the real fixture does
 
-- **Real device scan verified:** the Swift scanner generated a genuine RoomPlan scan; a curated example is in [`backend/testdata/`](backend/testdata/) (`room.usdz`, `room.json`, `metadata.json`). The Swift source was brought from the [`roomplanarkitapp` branch](https://github.com/Jonas-Maihoefer/room-twin/tree/roomplanarkitapp).
-- **Backend scaffold:** `GET /health` and `POST /scans` exist. `POST /scans` only validates a provisional JSON envelope and returns `accepted-stub`; it **does not accept USDZ uploads, store scans, perform replacement, or return a processed model**.
-- **Future work:** select and scale replacement assets, implement reliable USD composition and USDZ packaging, design the upload/result API, then validate an end-to-end scan on a device. The `usd-core` dependency is selected but **not yet installed or used** by the backend.
+The approved real scan in [backend/testdata](backend/testdata/) has eight furniture objects. With the default catalog, six are replaced (three chairs, two tables, one shelf); one cabinet and one bed remain as placeholders because no matching model is available. Preserving unsupported objects is intentional. The room architecture is preserved.
+
+## Run the backend
+
+Requires CPython 3.12. From the repository root:
+
+```bash
+cd backend
+python -m venv .venv
+```
+
+Activate the environment in PowerShell with `.\.venv\Scripts\Activate.ps1` or on Linux/macOS with `source .venv/bin/activate`. Then install and run:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m app.usd.cli replace \
+  --usdz testdata/room.usdz \
+  --json testdata/room.json \
+  --metadata testdata/metadata.json \
+  --output output/testscan-enhanced.usdz
+python -m pytest
+```
+
+The pinned dependencies include `usd-core==26.11`. The metadata argument is optional. The default model catalog is `assets/catalog.json`; use `--catalog path/to/catalog.json` for another supported manifest. The output directory is created as needed. The default report is `output/testscan-enhanced.report.json`. Existing USDZ or report destinations are protected; pass `--force` to replace the pair. Invalid input or failed validation prints an error to stderr and returns a nonzero exit status.
+
+For full Windows/Linux instructions, catalog extension, diagnostics and validation details, see [docs](docs/README.md) and [backend asset guide](backend/docs/adding-assets.md).
 
 ## Repository
 
 | Location | Purpose |
 | --- | --- |
-| [`RoomScanner/`](RoomScanner/) | Native Xcode/SwiftUI scanner, on-device USDZ/JSON export and Quick Look |
-| [`backend/`](backend/) | Python 3.11+ / FastAPI foundation; planned `usd-core` asset replacement |
-| [`backend/testdata/`](backend/testdata/) | Approved real-world RoomPlan input fixtures for offline backend development |
-| [`ProvidingCustomModelsForCapturedRoomsAndStructureExports/`](ProvidingCustomModelsForCapturedRoomsAndStructureExports/) | Apple's example, license, catalog and sample `.usdc` assets |
-| [`docs/`](docs/) | Architecture, development and verification |
+| [RoomScanner](RoomScanner/) | Native Swift/SwiftUI RoomPlan scanner |
+| [backend](backend/) | FastAPI scaffold and offline Python/OpenUSD replacement processor |
+| [backend/assets](backend/assets/) | Backend-owned model catalog, `.usdc` models and license notice |
+| [backend/testdata](backend/testdata/) | Approved real RoomPlan USDZ, JSON and metadata fixture |
+| [docs](docs/) | Architecture, development and verification documentation |
 
-A Mac with Xcode and a compatible LiDAR iPhone/iPad is needed to compile and run the scanner. **Backend development and USD scene processing can be done on Windows/Linux without a Mac.** See the [development guide](docs/how-to-dev.md) and [Windows backend guide](docs/development/windows.md).
+A Mac with Xcode and a supported LiDAR device is needed to build and run the scanner. Backend processing and tests can run on Windows or Linux. The automated checks validate scene structure, package dependencies and geometry; they do not prove rendered appearance or Apple Quick Look compatibility. See [manual viewer validation](docs/testing/ios-roomplan-validation.md).
 
-## Documentation
-
-- [Architecture and responsibility boundaries](docs/architecture/architecture.md)
-- [Current and planned system flow](docs/architecture/system-flow.md)
-- [Technology stack and implementation status](docs/architecture/tech-stack.md)
-- [Developer quick start](docs/how-to-dev.md)
-- [Windows backend development](docs/development/windows.md)
-- [Device and end-to-end validation](docs/testing/ios-roomplan-validation.md)
-- [Documentation index](docs/README.md)
-
-Indoor layouts can be sensitive. Only commit scans explicitly approved for repository use; do not commit private captures or camera frames.
+Only commit scans approved for repository use. Room layouts and camera frames can be sensitive.

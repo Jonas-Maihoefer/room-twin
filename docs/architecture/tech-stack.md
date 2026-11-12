@@ -1,34 +1,34 @@
 # Technology stack and validation status
 
-Room Twin uses **native Swift/SwiftUI on iOS**, **RoomPlan + ARKit** for capture, and a **Python/FastAPI + OpenUSD (`usd-core`) backend** for the planned furniture-replacement workflow. **USDZ is both the source and output format.**
+Room Twin uses native Swift/SwiftUI on iOS, RoomPlan + ARKit for capture, and Python/FastAPI + OpenUSD (usd-core) for offline furniture replacement. USDZ is the scan input and final output.
 
-| Layer | Selected technology | Current status |
+| Layer | Technology | Current status |
 | --- | --- | --- |
-| iOS app | Swift, SwiftUI, Xcode; [`RoomScanner/`](../../RoomScanner/) | Source present; native scanning validated by the committed real scan |
-| Capture and semantic data | Apple RoomPlan | Working on supported LiDAR iPhone; room JSON and USDZ verified from device |
-| AR session/camera images | ARKit, CoreImage | Native scanner uses ARKit and can save JPEG frames; frames are not required for furniture replacement |
-| Local model preview / sharing | Apple's Quick Look and SwiftUI ShareLink | Present for locally exported USDZ and companion files |
-| Transport | FastAPI over HTTPS (planned) | **Not connected**; file-upload/download contract not yet implemented |
-| API scaffold | Python 3.11+, FastAPI, Uvicorn | `GET /health` and provisional JSON-envelope `POST /scans` returning `accepted-stub` |
-| USD scene processing | [`usd-core`](https://pypi.org/project/usd-core/) / OpenUSD `pxr` Python API | **Selected, not yet implemented or declared as a backend dependency** |
-| Asset catalog | RoomPlan category/attribute rules, interchangeable USD assets | Apple's sample bundle is included; Python catalog and replacement engine pending |
-| Final scene | USDZ (with referenced USD layers and packaged material dependencies) | Original scan USDZ exists; enhanced USDZ generation pending |
-| CI | GitHub Actions backend unit tests on Linux | Existing FastAPI tests; no native iOS build in CI |
+| iOS app | Swift, SwiftUI, Xcode; [RoomScanner](../../RoomScanner/) | Native scanner implemented; genuine scan fixture committed |
+| Capture | Apple RoomPlan and ARKit | Exports USDZ, JSON and metadata on supported LiDAR hardware |
+| Local preview/share | Quick Look and SwiftUI ShareLink | Implemented for local scan files |
+| Transport | Swift app to FastAPI | Planned; upload and result download are not connected |
+| API scaffold | Python 3.12, FastAPI, Uvicorn | GET /health; provisional JSON-only POST /scans stub, not a scan upload service |
+| USD scene processing | OpenUSD Python API through usd-core==26.11 | Implemented in the offline CLI and tested against the real scan |
+| Asset catalog | JSON manifest and backend-owned .usdc models | Category/attribute matching, category defaults, and missing-model preservation implemented |
+| Output | Standalone USDZ plus versioned JSON report | Packaging, dependency resolution and structural/geometry checks implemented |
+| CI | GitHub Actions on Ubuntu with Python 3.12 | Installs .[dev] and runs the complete backend pytest suite |
 
-## Data contracts and geometry
+## Data and geometry
 
-- `room.usdz`: room structure and placeholder furniture stored as a USDZ scene. Preserve the original room layout, openings and unrelated geometry.
-- `room.json`: semantic labels, dimensions, transforms, object identifiers and recognition confidence; use it to inform replacements.
-- `metadata.json`: device and scan metadata, including metre units and the ARKit Y-up coordinate system in the current fixture.
-- `.usdc`, `.usda`: USD assets/layers used inside source and replacement scenes; correct references and packaging must be validated.
-- **Output:** enhanced `.usdz`; GLB generation was dropped from the selected MVP.
+- room.usdz: RoomPlan scene and geometry references. The processor retains architectural geometry and original geometry for unsupported furniture.
+- room.json: furniture UUIDs, categories, attributes, dimensions and transforms used for matching and placement.
+- metadata.json: optional scan metadata; the fixture declares metres and Y-up coordinates.
+- Catalog models: .usdc files registered under backend/assets/catalog.json. Entries declare category, attribute map, match type, relative path, units, up axis, pivot and scaling policy.
+- Output: standalone .usdz and a sibling .report.json by default.
 
-The Python service will use `usd-core` to load/compose the scanned USD stage. This is **not** a Python translation of Apple's native `CapturedRoom.export()` function. Apple's [custom-models sample](../../ProvidingCustomModelsForCapturedRoomsAndStructureExports/) supplies example matching/catalog behavior and model files; the OpenUSD-based implementation and its testing remain future work.
+See the [asset authoring guide](../../backend/docs/adding-assets.md) for model and catalog constraints. This processor uses OpenUSD directly; GLB conversion is not part of the active path.
 
 ## Development environments
 
-- **Swift app:** requires macOS/Xcode to compile and sign; use a compatible LiDAR iPhone or iPad for real capture.
-- **Backend:** Python 3.11+ on Windows or Linux; Python 3.12 is used by the current Docker image and GitHub Actions. Official `usd-core` wheels are published for Windows and manylinux, but the package has **not yet been installed into this project's dependency list**.
-- **No React Native, Expo, Metro, EAS or browser-mock app** is part of the current target architecture.
+- The Swift scanner requires macOS/Xcode and compatible LiDAR hardware for a real capture.
+- Backend development supports CPython 3.12 on Windows and Linux. usd-core==26.11 is pinned in backend/pyproject.toml.
+- The GitHub Actions workflow and Docker test image use Python 3.12 on Linux.
+- No React Native, Expo, Metro, EAS or browser-mock app is part of the current architecture.
 
-See [Windows backend instructions](../development/windows.md), [general development notes](../how-to-dev.md), and [validation checklist](../testing/ios-roomplan-validation.md).
+See [development](../how-to-dev.md), [Windows instructions](../development/windows.md), and [validation](../testing/ios-roomplan-validation.md).

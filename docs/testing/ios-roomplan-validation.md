@@ -1,45 +1,40 @@
-# Testplan – Native RoomPlan-App und USDZ-Ersatzmodelle
+# RoomPlan and USDZ validation
 
-**Status (12.11.2026):** Ein echter Scan mit der **Swift-/SwiftUI-App** ist gelungen. Die vollständige Kette **iPhone → FastAPI → Python/OpenUSD → ersetzte USDZ → iPhone** ist noch **nicht** implementiert oder nachgewiesen.
+## Implemented offline verification
 
-[Architektur](../architecture/architecture.md) · [Systemablauf](../architecture/system-flow.md) · [Technikstack](../architecture/tech-stack.md)
+The Swift scanner produces RoomPlan USDZ, JSON and metadata files. The backend can process those files independently through the Python CLI; no iOS-to-FastAPI connection is required or implemented.
 
-## Bereits vorliegende Nachweise
+From backend/, install the pinned CPython 3.12 dependencies and run:
 
-- Die native App unter `RoomScanner/` (übernommen aus dem Branch `roomplanarkitapp`) verwendet Apples RoomPlan und ARKit; für echte Scans werden Xcode/macOS und ein unterstütztes LiDAR-Gerät benötigt.
-- Der erste reale Scan liegt in `backend/testdata/`: `room.usdz`, `room.json` und `metadata.json`. Laut Metadaten wurde er am **11.11.2026** auf einem iPhone mit **iOS 27.0.1** aufgezeichnet; Meter und Y-up-Koordinaten sind angegeben.
-- Das JSON enthält vier Wände, einen Boden, zwei Türen, ein Fenster und acht erkannte Objekte (drei Stühle, zwei Tische, zwei Stauraum-Objekte und ein Bett).
-- Die App kann bereits lokal exportierte USDZ-Dateien über Quick Look anzeigen und Dateien teilen. **Ein Backend-Upload wurde noch nicht getestet, da er nicht implementiert ist.**
+~~~bash
+python -m pip install -e ".[dev]"
+python -m app.usd.cli replace \
+  --usdz testdata/room.usdz \
+  --json testdata/room.json \
+  --metadata testdata/metadata.json \
+  --output output/testscan-enhanced.usdz
+python -m pytest
+~~~
 
-## Testfälle für den Backend-Prototyp (noch offen)
+The test suite covers matching and fallback, transformations and model-local offsets, repeated categories, architecture preservation, package references, report contents, error handling, and real-scan integration. The CLI reopens its package and checks dependency resolution and geometry. A clean-process open check can be run with the command in the [Windows guide](../development/windows.md).
 
-| Test | Erwartung |
-| --- | --- |
-| USDZ öffnen | `usd-core` lädt die vollständige Szene einschließlich ihrer internen USDA-/USDC-Referenzen |
-| UUID-Abgleich | Objekte aus `room.json` werden den entsprechenden USD-Prims eindeutig zugeordnet |
-| Modellauswahl | Passende Kategorie/Attribute führen zu einem gültigen Modell aus dem Katalog |
-| Platzierung | Position, Drehung, Skalierung, Achsen und Einheiten stimmen mit dem erkannten Objekt überein |
-| Bestandsschutz | Wände, Boden, Türen, Fenster und nicht ersetzte Objekte bleiben erhalten |
-| Fehlendes Modell | Original-Platzhalter bleibt erhalten, Fehler wird dokumentiert |
-| Verpackung | Neue `.usdz` ist selbstständig ladbar und enthält alle referenzierten Geometrien/Materialien |
-| Darstellung | Ergebnis lässt sich in einem unabhängigen USDZ-Viewer sowie auf dem iPhone plausibel prüfen |
-| Robustheit | Defekte Archive, falsche IDs, zu große Dateien und inkonsistente Metadaten werden kontrolliert abgewiesen |
+The checked-in scan contains eight furniture objects. Expected outcome with the default catalog: three chairs, two tables and one shelf are replaced; one cabinet and one bed are kept as placeholders because matching assets are unavailable. Preserving unmatched objects is intentional. Architectural geometry must remain intact.
 
-Regressions- und Geometrieprüfungen gegen `backend/testdata/` sind erforderlich. Der Apple-Katalog ist nur ein erster Referenzsatz; er deckt nicht alle erkannten Möbel des Testscans ab.
+## What automated validation establishes
 
-## End-to-End-Testfälle (erst nach API-Integration)
+OpenUSD tests and the JSON report check scene composition, UUID identity, replacement meshes, transforms, measured bounds, architecture, package-contained dependencies and missing-model fallback. The source fixture is treated as read-only; integration tests verify its content/hash remains unchanged. These checks do not render the result and do not prove perceptual quality, material appearance or Apple Quick Look compatibility.
 
-1. Scan mit der Swift-App starten, abschließen und die drei Quelldateien erzeugen.
-2. Über die künftig implementierte und abgesicherte FastAPI-Schnittstelle USDZ, JSON und Metadaten übertragen.
-3. Verarbeitungsstatus, Fehlermeldungen und Ergebnisbereitstellung prüfen.
-4. Nachweislich mindestens ein Möbelstück durch ein detailliertes Asset ersetzen, ohne Raumgeometrie zu beschädigen.
-5. Fertige **USDZ** auf das iPhone laden, mit Quick Look ansehen und teilen.
-6. Netzwerkausfall, ungültige Dateien, fehlende Berechtigungen und einen zweiten Scan testen.
+## Manual viewer check
 
-Ergebnis je Lauf mit Gerätemodell, iOS-Version, App-Commit, Backend-Commit, Testscan und Auffälligkeiten dokumentieren. Private Räume und Kamerabilder nicht veröffentlichen.
+After generating output/testscan-enhanced.usdz, open it in Apple Quick Look/Reality Composer or another compatible USDZ viewer. Check that:
 
-## MVP-Abnahme
+- walls, floor, doors, windows and openings remain present;
+- replacements are oriented and sized plausibly and are not clipped or displaced;
+- the cabinet and bed placeholders remain;
+- the enhanced file opens without missing assets.
 
-Erst wenn **nativer RoomPlan-Scan → FastAPI-Upload → Python/`usd-core`-Möbelersetzung → gültige neue USDZ → Anzeige/Teilen auf dem iPhone** nachweislich funktioniert, ist die gesamte Pipeline abgenommen.
+The repository's geometry diagnostic is in [furniture-placement-diagnostic.md](../../backend/docs/furniture-placement-diagnostic.md). If no compatible viewer is available, report that rendered inspection was not performed; do not infer it from structural checks.
 
-Der reale Ausgangsscan erfüllt bereits die **Capture-/Export-Voraussetzung**, ersetzt aber weder einen Backend-Test noch einen vollständigen Ende-zu-Ende-Test.
+## Planned device/API test
+
+Swift-to-FastAPI scan upload and enhanced USDZ download are not implemented. POST /scans is only a JSON validation stub. A future end-to-end transport test must cover upload, processing orchestration, result retrieval, failure handling and preview on a supported iOS device.
