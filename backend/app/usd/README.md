@@ -25,15 +25,23 @@ without changing replacement decisions or rewriting dependency paths.
 
 ## Transform policy
 
-RoomPlan dimensions are metres in Y-up coordinates. The replacement bounds are
-read from the actual catalog stage with `UsdGeom.BBoxCache`; `metersPerUnit`
-converts the requested target extents into authored asset units. The detected
-placeholder mesh supplies the object-local position and authored orientation.
-Its local point bounds are centered under a placement Xform, while a nested
-model Xform applies nonuniform per-axis fitting and the corresponding pivot
-translation. This preserves object placement once and avoids applying the JSON
-matrix on top of the composed USD transform. `parentIdentifier` remains
-semantic metadata only.
+RoomPlan dimensions are metres in Y-up coordinates. Bounds are measured in the
+asset's raw authored coordinates, while target dimensions are converted from
+metres to destination-stage units using the destination `metersPerUnit`.
+OpenUSD references compose raw coordinates and do not rescale geometry from a
+referenced layer's `metersPerUnit`; fitting is therefore applied exactly once
+from raw asset bounds to destination-stage units. Asset unit metadata still
+describes the source asset's physical size and is validated by the catalog.
+
+The detected placeholder mesh supplies the object-local position and authored
+orientation. Since the scanned object prim is itself an `Imageable` mesh, the
+replacement is authored as a sibling: only the placeholder receives the
+invisible visibility opinion, and the replacement does not inherit it. The
+sibling copies the placeholder's composed local placement transform once. A
+nested model Xform applies nonuniform per-axis fitting and centers the model on
+the placeholder's local bounds center. This avoids applying the JSON matrix on
+top of the composed USD transform. `parentIdentifier` remains semantic
+metadata only.
 
 The current catalog models are metre, Y-up assets. A non-Y-up model is rejected
 with a diagnostic rather than rotated speculatively. Nonuniform scale is the

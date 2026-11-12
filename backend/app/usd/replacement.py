@@ -87,7 +87,16 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
             shutil.copy2(catalog.root / item.model.path, dep)
         dependencies.append(dep)
         relative = Path(os.path.relpath(dep, root.parent)).as_posix()
-        replacement = UsdGeom.Xform.Define(stage, obj.GetPath().AppendChild("RoomTwinReplacement"))
+        # The placeholder is itself an Imageable mesh prim in this scan. Hiding
+        # it therefore hides every child, including a replacement. Put the new
+        # model beside it and copy its local placement transform exactly once.
+        replacement_path = obj.GetParent().GetPath().AppendChild(
+            f"RoomTwinReplacement_{item.match.uuid.replace('-', '')}"
+        )
+        replacement = UsdGeom.Xform.Define(stage, replacement_path)
+        replacement.GetPrim().SetCustomDataByKey("UUID", item.match.uuid)
+        source_matrix = UsdGeom.Xformable(obj).GetLocalTransformation()
+        UsdGeom.Xformable(replacement).AddTransformOp().Set(Gf.Matrix4d(source_matrix))
         # Keep the verified placeholder mesh's authored rotation and place the
         # fitted replacement at the placeholder's local-space bounds center.
         source_mesh = UsdGeom.Mesh(meshes[0])
@@ -97,11 +106,6 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
         point_min = tuple(min(float(point[i]) for point in points) for i in range(3))
         point_max = tuple(max(float(point[i]) for point in points) for i in range(3))
         geometry_center = Gf.Vec3d(*((point_min[i] + point_max[i]) / 2 for i in range(3)))
-        source_matrix = UsdGeom.Xformable(meshes[0]).GetLocalTransformation()
-        placement_matrix = Gf.Matrix4d(source_matrix)
-        placeholder_center = source_matrix.Transform(geometry_center)
-        placement_matrix.SetTranslateOnly(placeholder_center)
-        UsdGeom.Xformable(replacement).AddTransformOp().Set(placement_matrix)
         model_prim = UsdGeom.Xform.Define(stage, replacement.GetPath().AppendChild("Model"))
         model_prim.GetPrim().GetReferences().AddReference(relative)
         asset_stage = Usd.Stage.Open(str(dep))
@@ -109,9 +113,12 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
             raise ReplacementError(f"cannot reopen copied model {dep}")
         if UsdGeom.GetStageUpAxis(asset_stage) != "Y":
             raise ReplacementError(f"catalog asset {item.model.path} is not Y-up; axis conversion is not configured")
-        meters_per_unit = float(UsdGeom.GetStageMetersPerUnit(asset_stage))
-        if not (meters_per_unit > 0 and meters_per_unit < float("inf")):
-            raise ReplacementError(f"catalog asset {item.model.path} has invalid metersPerUnit={meters_per_unit}")
+        asset_meters_per_unit = float(UsdGeom.GetStageMetersPerUnit(asset_stage))
+        destination_meters_per_unit = float(UsdGeom.GetStageMetersPerUnit(stage))
+        if not (asset_meters_per_unit > 0 and asset_meters_per_unit < float("inf")):
+            raise ReplacementError(f"catalog asset {item.model.path} has invalid metersPerUnit={asset_meters_per_unit}")
+        if not (destination_meters_per_unit > 0 and destination_meters_per_unit < float("inf")):
+            raise ReplacementError(f"destination stage has invalid metersPerUnit={destination_meters_per_unit}")
         default = asset_stage.GetDefaultPrim()
         if default:
             model_prim.GetPrim().GetReferences().ClearReferences()
@@ -123,23 +130,25 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
         if any(value <= 1e-8 for value in asset_ext):
             raise ReplacementError(f"degenerate catalog bounds for {item.model.path}")
         try:
-            # USD bounds are in the asset's authored units; RoomPlan dimensions
-            # are metres. Scaling target by the stage's meter factor handles
-            # centimetre/millimetre-authored models without assuming catalog text.
+            # Referenced coordinates are composed verbatim; OpenUSD does not
+            # rescale them based on the referenced layer's metersPerUnit. Fit
+            # raw asset coordinates to destination-stage units exactly once.
+            # The asset's unit metadata validates physical source dimensions,
+            # while destination metersPerUnit converts RoomPlan metres.
             fitting = fit_bounds(tuple(float(alo[i]) for i in range(3)),
                                  tuple(float(ahi[i]) for i in range(3)),
-                                 tuple(float(value) / meters_per_unit for value in target))
+                                 tuple(float(value) / destination_meters_per_unit for value in target))
         except TransformError as exc:
             raise ReplacementError(f"cannot fit catalog model {item.model.path}: {exc}") from exc
         scale, translation = fitting.scale, fitting.translation
 
-        # The placeholder's composed transform already locates it in the room.
-        # A child replacement inherits that transform once; only local fitting
-        # is authored here. Hide the old meshes through exact composed overrides.
+        # Hide only original geometry. The sibling replacement does not inherit
+        # the placeholder's visibility opinion.
         for mesh in meshes:
             UsdGeom.Imageable(mesh).MakeInvisible()
         xform = UsdGeom.Xformable(model_prim)
-        xform.AddTranslateOp().Set(Gf.Vec3d(*translation))
+        local_target_center = Gf.Vec3d(*geometry_center)
+        xform.AddTranslateOp().Set(Gf.Vec3d(*(translation[i] + local_target_center[i] for i in range(3))))
         xform.AddScaleOp().Set(Gf.Vec3f(*scale))
     stage.GetRootLayer().Save()
 
@@ -150,7 +159,10 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
         if item.model is None:
             continue
         obj = final_stage.GetPrimAtPath(item.match.layer.composed_prim_paths[0])
-        replacement = obj.GetChild("RoomTwinReplacement") if obj else None
+        replacement_path = obj.GetParent().GetPath().AppendChild(
+            f"RoomTwinReplacement_{item.match.uuid.replace('-', '')}"
+        ) if obj else None
+        replacement = final_stage.GetPrimAtPath(replacement_path) if replacement_path else None
         if not replacement or not any(prim.IsA(UsdGeom.Mesh) for prim in Usd.PrimRange(replacement)):
             raise ReplacementError(f"catalog geometry did not compose for UUID {item.match.uuid}")
     completed = tuple(dataclass_replace(item, status="replaced") if item.model else item for item in plan)

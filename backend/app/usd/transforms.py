@@ -1,4 +1,4 @@
-"""Bounds-driven asset fitting utilities; inputs and outputs use metres, Y-up."""
+"""Bounds-driven fitting; source bounds and target extents share one coordinate unit."""
 from __future__ import annotations
 
 import math
