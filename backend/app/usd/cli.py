@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -11,19 +12,29 @@ from typing import Sequence
 
 from app.usd import AssetCatalog, process_roomplan
 from app.usd.packaging import PackagingError, package_usdz, validate_usdz
+from app.usd.publication import publish_output_pair
 
 
 def _report(source: Path, output: Path, catalog: AssetCatalog, result, validation) -> dict:
     entries = []
     for item in result.plan:
+        selected = item.model is not None
+        reason = None
+        if item.match_type == "category_default":
+            reason = "category_fallback"
+        elif not selected:
+            same_category = any(model.category == item.match.source.category for model in catalog.models)
+            reason = "no_compatible_attribute_match" if same_category else "no_matching_catalog_entry"
         entries.append({
             "uuid": item.match.uuid,
             "prim_path": item.match.layer.composed_prim_paths[0],
             "category": item.match.source.category,
             "status": item.status,
-            "match_type": item.match_type,
+            "match_type": "exact" if item.match_type == "specific" else
+                          "category_fallback" if item.match_type == "category_default" else "none",
             "attributes": dict(sorted((item.match.source.attributes or {}).items())),
             "model": item.model.path if item.model else None,
+            "reason": reason,
         })
     entries.sort(key=lambda entry: entry["uuid"])
     replaced = sum(entry["status"] == "replaced" for entry in entries)
@@ -39,32 +50,11 @@ def _report(source: Path, output: Path, catalog: AssetCatalog, result, validatio
         "warnings": sorted(result.warnings),
         "validation": {"status": "passed" if validation.valid else "failed",
                        "root_layer": validation.root_layer,
-                       "errors": list(validation.errors)},
+                       "errors": list(validation.errors),
+                       "geometry": validation.diagnostics["geometry"],
+                       "package": validation.diagnostics["package"]},
+        "package": validation.diagnostics["package"],
     }
-
-
-def _write_json_atomic(path: Path, document: dict, *, overwrite: bool) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() and not overwrite:
-        raise OSError(f"report already exists: {path}")
-    fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
-            json.dump(document, stream, indent=2, sort_keys=True)
-            stream.write("\n")
-            stream.flush()
-            os.fsync(stream.fileno())
-        if overwrite:
-            os.replace(temporary, path)
-        else:
-            try:
-                os.link(temporary, path)
-            except FileExistsError as exc:
-                raise OSError(f"report appeared during processing: {path}") from exc
-            temporary.unlink()
-    finally:
-        temporary.unlink(missing_ok=True)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -115,29 +105,44 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
 
     workspace = None
-    package_created = False
+    package_staging = None
+    report_staging = None
     try:
         output.parent.mkdir(parents=True, exist_ok=True)
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        for destination in (output, report_path):
+            if destination.exists() and not destination.is_file():
+                raise OSError(f"output destination is not a regular file: {destination}")
         catalog = AssetCatalog.load(catalog_path)
         workspace = Path(tempfile.mkdtemp(prefix="room-twin-work-", dir=output.parent)) / "workspace"
         result = process_roomplan(source, scan_json, catalog, workspace, metadata_path=metadata)
-        package_usdz(result, output, overwrite=args.force)
-        package_created = True
-        validation = validate_usdz(output, result)
+        package_fd, staged_package_name = tempfile.mkstemp(
+            prefix="room-twin-stage-", suffix=".usdz", dir=output.parent)
+        os.close(package_fd)
+        package_staging = Path(staged_package_name)
+        package_staging.unlink()
+        report_fd, staged_report_name = tempfile.mkstemp(
+            prefix=f".{report_path.stem}.", suffix=".json", dir=report_path.parent)
+        os.close(report_fd)
+        report_staging = Path(staged_report_name)
+        staged_output = package_staging
+        staged_report = report_staging
+        package_usdz(result, staged_output)
+        validation = validate_usdz(staged_output, result)
         if not validation.valid:
-            output.unlink(missing_ok=True)
-            raise PackagingError("final USDZ failed validation: " + "; ".join(validation.errors))
+            raise PackagingError("staged USDZ failed validation: " + "; ".join(validation.errors))
         report = _report(source, output, catalog, result, validation)
-        _write_json_atomic(report_path, report, overwrite=args.force)
+        staged_report.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        publish_output_pair(staged_output, staged_report, output, report_path, overwrite=args.force)
     except Exception as exc:
-        if package_created and not args.force:
-            output.unlink(missing_ok=True)
         print(f"error: {exc}", file=sys.stderr)
         return 1
     finally:
         if workspace is not None:
-            import shutil
             shutil.rmtree(workspace.parent, ignore_errors=True)
+        for temporary in (package_staging, report_staging):
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
 
     print("Room Twin processing complete")
     print(f"Furniture detected: {report['furniture_detected']}")

@@ -14,6 +14,7 @@ from pxr import Sdf, Usd, UsdGeom, UsdUtils
 
 from app.usd import AssetCatalog, PackagingError, package_usdz, process_roomplan, validate_usdz
 from app.usd.cli import main
+from app.usd import publication
 
 
 BACKEND = Path(__file__).parents[1]
@@ -74,6 +75,19 @@ def test_real_scan_cli_usdz_is_self_contained_and_preserves_architecture(tmp_pat
     }
     assert {obj["category"] for obj in report["objects"] if obj["status"] != "replaced"} == {"storage", "bed"}
     assert report["validation"]["status"] == "passed"
+    assert report["validation"]["geometry"]["status"] == "passed"
+    assert report["validation"]["geometry"]["architecture_preserved"]["status"] == "passed"
+    assert report["validation"]["geometry"]["object_count_preserved"] == {
+        "status": "passed", "expected": 8, "actual": 8,
+    }
+    assert report["validation"]["geometry"]["replacement_geometry_valid"]["status"] == "passed"
+    assert report["validation"]["geometry"]["transforms"]["replacement_world_bounds"]
+    assert report["package"]["status"] == "passed"
+    assert report["package"]["file_count"] == len(report["package"]["files"])
+    assert report["package"]["usd_layers"]
+    assert report["package"]["replacement_assets"]
+    assert report["package"]["unresolved_dependencies"] == []
+    assert report["package"]["external_dependencies_detected"] is False
     assert hashlib.sha256(SOURCE.read_bytes()).hexdigest() == source_hash
 
     packaged = Usd.Stage.Open(str(output))
@@ -110,6 +124,18 @@ def test_real_scan_cli_usdz_is_self_contained_and_preserves_architecture(tmp_pat
         selected_files = {Path(entry["model"]).name for entry in replaced}
         assert selected_files
         assert all(any(name.endswith(filename) for name in normalized_names) for filename in selected_files)
+        assert set(report["package"]["files"]) == set(normalized_names)
+        assert all(any(member.endswith(Path(asset).name) for member in normalized_names)
+                   for asset in report["package"]["replacement_assets"])
+    assert all(entry["status"] == "replaced" and entry["reason"] is None
+               for entry in report["objects"] if entry["match_type"] == "exact")
+    assert all(entry["status"] == "replaced" and entry["reason"] == "category_fallback"
+               for entry in report["objects"] if entry["match_type"] == "category_fallback")
+    assert all(entry["status"] == "preserved_no_model" and entry["reason"] in
+               {"no_matching_catalog_entry", "no_compatible_attribute_match"}
+               for entry in report["objects"] if entry["status"] != "replaced")
+    assert all(entry["match_type"] in {"exact", "category_fallback", "none"}
+               for entry in report["objects"])
 
     # The CLI removes its temporary workspace. Opening from a clean directory
     # exercises a fresh process with no access to the backend asset catalog.
@@ -189,3 +215,107 @@ def test_cli_malformed_json_returns_nonzero_without_output(tmp_path, capsys):
     assert status != 0
     assert "cannot load RoomPlan scan" in capsys.readouterr().err
     assert not output.exists()
+
+
+def _staged_pair(tmp_path, usdz=b"new-usdz", report=b"new-report"):
+    staged_usdz = tmp_path / "staged.usdz"
+    staged_report = tmp_path / "staged.json"
+    staged_usdz.write_bytes(usdz)
+    staged_report.write_bytes(report)
+    return staged_usdz, staged_report
+
+
+def test_pair_publication_success_and_no_force_refusal(tmp_path):
+    staged_usdz, staged_report = _staged_pair(tmp_path)
+    output, report = tmp_path / "out.usdz", tmp_path / "out.json"
+    publication.publish_output_pair(staged_usdz, staged_report, output, report, overwrite=False)
+    assert output.read_bytes() == b"new-usdz"
+    assert report.read_bytes() == b"new-report"
+
+    staged_usdz, staged_report = _staged_pair(tmp_path, b"second-usdz", b"second-report")
+    with pytest.raises(publication.PublicationError, match="already exists"):
+        publication.publish_output_pair(staged_usdz, staged_report, output, report, overwrite=False)
+    assert output.read_bytes() == b"new-usdz"
+    assert report.read_bytes() == b"new-report"
+
+
+def test_pair_publication_force_overwrites_both(tmp_path):
+    output, report = tmp_path / "out.usdz", tmp_path / "out.json"
+    output.write_bytes(b"old-usdz")
+    report.write_bytes(b"old-report")
+    staged_usdz, staged_report = _staged_pair(tmp_path)
+    publication.publish_output_pair(staged_usdz, staged_report, output, report, overwrite=True)
+    assert output.read_bytes() == b"new-usdz"
+    assert report.read_bytes() == b"new-report"
+    assert not list(tmp_path.glob("*.backup"))
+    assert not list(tmp_path.glob(".*.backup"))
+
+
+@pytest.mark.parametrize("fail_target", ["usdz", "report"])
+def test_pair_publication_failure_restores_prior_pair_and_cleans_backups(
+    tmp_path, monkeypatch, fail_target
+):
+    output, report = tmp_path / "out.usdz", tmp_path / "out.json"
+    output.write_bytes(b"old-usdz")
+    report.write_bytes(b"old-report")
+    staged_usdz, staged_report = _staged_pair(tmp_path)
+    real_replace = publication.os.replace
+
+    def fail_once(source, destination):
+        source, destination = Path(source), Path(destination)
+        if fail_target == "usdz" and source == staged_usdz:
+            raise OSError("injected USDZ publication failure")
+        if fail_target == "report" and source == staged_report:
+            raise OSError("injected report publication failure")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(publication.os, "replace", fail_once)
+    with pytest.raises(publication.PublicationError, match="injected"):
+        publication.publish_output_pair(staged_usdz, staged_report, output, report, overwrite=True)
+    assert output.read_bytes() == b"old-usdz"
+    assert report.read_bytes() == b"old-report"
+    assert not list(tmp_path.glob(".*.backup"))
+    assert list(tmp_path.glob("staged.*"))
+
+
+@pytest.mark.parametrize("failure", ["package", "report"])
+def test_cli_generation_failure_preserves_existing_pair(tmp_path, monkeypatch, capsys, failure):
+    import app.usd.cli as cli
+    output, report = tmp_path / "kept.usdz", tmp_path / "kept.report.json"
+    output.write_bytes(b"old-usdz")
+    report.write_bytes(b"old-report")
+    if failure == "package":
+        monkeypatch.setattr(cli, "package_usdz", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("package injected")))
+    else:
+        monkeypatch.setattr(cli, "_report", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("report injected")))
+    code = main(["replace", "--usdz", str(SOURCE), "--json", str(SCAN), "--output", str(output),
+                 "--force"])
+    assert code == 1
+    assert failure + " injected" in capsys.readouterr().err
+    assert output.read_bytes() == b"old-usdz"
+    assert report.read_bytes() == b"old-report"
+    assert not list(tmp_path.glob("room-twin-work-*"))
+    assert not list(tmp_path.glob("room-twin-stage-*"))
+
+
+def test_cli_validation_failure_cannot_publish_or_misreport(tmp_path, monkeypatch, capsys):
+    import app.usd.cli as cli
+    from app.usd.packaging import ValidationResult
+    output, report = tmp_path / "kept.usdz", tmp_path / "kept.report.json"
+    output.write_bytes(b"old-usdz")
+    report.write_bytes(b"old-report")
+
+    def fake_package(result, path, **kwargs):
+        Path(path).write_bytes(b"invalid-stage")
+        return Path(path)
+
+    monkeypatch.setattr(cli, "package_usdz", fake_package)
+    monkeypatch.setattr(cli, "validate_usdz", lambda *a, **k: ValidationResult(
+        False, None, ("unresolved dependency: missing.usdc",)))
+    status = main(["replace", "--usdz", str(SOURCE), "--json", str(SCAN),
+                   "--output", str(output), "--force"])
+    assert status == 1
+    assert "staged USDZ failed validation" in capsys.readouterr().err
+    assert output.read_bytes() == b"old-usdz"
+    assert report.read_bytes() == b"old-report"
+    assert not list(tmp_path.glob("room-twin-stage-*"))
