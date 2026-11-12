@@ -50,7 +50,7 @@ struct ContentView: View {
                 ScannerView(manager: manager)
                 Button("Abbrechen", role: .destructive) {
                     amscannen = false
-                    manager.stopSammeln()
+                    manager.verwerfeScan()
                 }
                 Button("Fertig") {
                     manager.stopScan()
