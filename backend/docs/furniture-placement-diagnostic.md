@@ -74,14 +74,19 @@ pose separately.
 
 ## Validation
 
-- Six replaced, two preserved, eight UUIDs accounted for.
-- The generated `output/testscan-enhanced.usdz` reopens successfully; dependency
-  resolution reports no unresolved assets.
-- Architecture geometry and transforms are unchanged by the CLI integration
-  test. The source scan hash is also unchanged.
-- The full backend suite passes with 44 tests and no skipped tests.
-- No compatible USD viewer or renderer is available in this environment, so
-  this report establishes geometric placement, not rendered visual quality.
-  To visually check, open `backend/output/testscan-enhanced.usdz` in Apple
-  Reality Composer/Quick Look or another USDZ viewer and compare it with
-  `backend/testdata/room.usdz`.
+- Six replaced, two preserved, eight UUIDs accounted for. Issue D regenerated
+  `output/issue-d-enhanced.usdz` after removing the Apple sample directory.
+- A separate OpenUSD process reopened the package with the backend asset tree
+  masked. All eight source furniture prim paths remained present, all six
+  replacement models were packaged, and dependency resolution reported no
+  unresolved assets or external dependencies.
+- The CLI diagnostics report passed geometry, package, and architecture
+  preservation checks. The source scan SHA-256 remained
+  `198D8B344F46E9A3456F327F0A15A8AB83C0899D7B81360E9F50695820446BC6`.
+- The complete backend suite ran in the Docker test image: 53 passed, zero
+  skipped, with one dependency deprecation warning.
+- Rendered visual review was not performed for Issue D. The numeric checks
+  establish structural validity and measured placement, not rendered visual
+  quality. To inspect manually, open
+  `backend/output/issue-d-enhanced.usdz` in Apple Reality Composer/Quick Look
+  or another USDZ viewer and compare it with `backend/testdata/room.usdz`.
