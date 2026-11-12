@@ -1,35 +1,34 @@
-# Technology stack
+# Technology stack and validation status
 
-The system architecture is chosen: a custom iOS app using Apple RoomPlan, direct backend integration, furniture replacement, and GLB output. The technologies below establish the first foundation; native compatibility and the complete processing path still need validation.
+Room Twin uses **native Swift/SwiftUI on iOS**, **RoomPlan + ARKit** for capture, and a **Python/FastAPI + OpenUSD (`usd-core`) backend** for the planned furniture-replacement workflow. **USDZ is both the source and output format.**
 
-## Chosen requirements
+| Layer | Selected technology | Current status |
+| --- | --- | --- |
+| iOS app | Swift, SwiftUI, Xcode; [`RoomScanner/`](../../RoomScanner/) | Source present; native scanning validated by the committed real scan |
+| Capture and semantic data | Apple RoomPlan | Working on supported LiDAR iPhone; room JSON and USDZ verified from device |
+| AR session/camera images | ARKit, CoreImage | Native scanner uses ARKit and can save JPEG frames; frames are not required for furniture replacement |
+| Local model preview / sharing | Apple's Quick Look and SwiftUI ShareLink | Present for locally exported USDZ and companion files |
+| Transport | FastAPI over HTTPS (planned) | **Not connected**; file-upload/download contract not yet implemented |
+| API scaffold | Python 3.11+, FastAPI, Uvicorn | `GET /health` and provisional JSON-envelope `POST /scans` returning `accepted-stub` |
+| USD scene processing | [`usd-core`](https://pypi.org/project/usd-core/) / OpenUSD `pxr` Python API | **Selected, not yet implemented or declared as a backend dependency** |
+| Asset catalog | RoomPlan category/attribute rules, interchangeable USD assets | Apple's sample bundle is included; Python catalog and replacement engine pending |
+| Final scene | USDZ (with referenced USD layers and packaged material dependencies) | Original scan USDZ exists; enhanced USDZ generation pending |
+| CI | GitHub Actions backend unit tests on Linux | Existing FastAPI tests; no native iOS build in CI |
 
-| Area | Requirement |
-|---|---|
-| Client | Custom iOS app with integrated scan |
-| Capture | Apple RoomPlan on a supported LiDAR device |
-| Transfer | Direct API upload using structured room and object data |
-| Processing | Backend geometry and asset pipeline |
-| MVP output | GLB available to download and share in the app |
-| Later work | In-app viewer or editor only after the MVP |
+## Data contracts and geometry
 
-## Current implementation and validation
+- `room.usdz`: room structure and placeholder furniture stored as a USDZ scene. Preserve the original room layout, openings and unrelated geometry.
+- `room.json`: semantic labels, dimensions, transforms, object identifiers and recognition confidence; use it to inform replacements.
+- `metadata.json`: device and scan metadata, including metre units and the ARKit Y-up coordinate system in the current fixture.
+- `.usdc`, `.usda`: USD assets/layers used inside source and replacement scenes; correct references and packaging must be validated.
+- **Output:** enhanced `.usdz`; GLB generation was dropped from the selected MVP.
 
-| Area | Current foundation | Validation status |
-|---|---|---|
-| iOS app | TypeScript, React Native, Expo SDK 53 | App checks are recorded in the PR description; device build and native compatibility remain pending |
-| iOS build | EAS internal development build | Cloud build not attempted; Expo project access, Apple signing, and device registration are required |
-| Room scanning | Apple RoomPlan through expo-roomplan 1.2.1 | Wrapper podspec and config plugin require iOS 17; JSON and USDZ export have not been verified on-device |
-| API | Python 3.11+, FastAPI, Uvicorn | Local and Docker scaffold with a provisional versioned ingestion stub |
-| Geometry and GLB | To be selected after inspecting real RoomPlan exports | Not implemented |
+The Python service will use `usd-core` to load/compose the scanned USD stage. This is **not** a Python translation of Apple's native `CapturedRoom.export()` function. Apple's [custom-models sample](../../ProvidingCustomModelsForCapturedRoomsAndStructureExports/) supplies example matching/catalog behavior and model files; the OpenUSD-based implementation and its testing remain future work.
 
-The JavaScript package versions are recorded in the app manifest and lockfile. The RoomPlan wrapper is isolated behind an app-facing adapter so its version-specific surface can be changed independently.
+## Development environments
 
-## Data formats
+- **Swift app:** requires macOS/Xcode to compile and sign; use a compatible LiDAR iPhone or iPad for real capture.
+- **Backend:** Python 3.11+ on Windows or Linux; Python 3.12 is used by the current Docker image and GitHub Actions. Official `usd-core` wheels are published for Windows and manylinux, but the package has **not yet been installed into this project's dependency list**.
+- **No React Native, Expo, Metro, EAS or browser-mock app** is part of the current target architecture.
 
-- **Capture:** Apple's structured RoomPlan result, with its actual exported fields to be confirmed on-device.
-- **API input:** a future explicit, versioned mapping that preserves or deliberately handles dimensions, categories, transforms, surfaces, and openings. The provisional envelope treats the source JSON as opaque.
-- **MVP output:** GLB as a portable 3D scene.
-- **Additional formats:** only if separately required; formats such as BLEND could need extra processing.
-
-Expo Go cannot load the native RoomPlan module. A signed EAS development build and a physical compatible LiDAR device are required to validate capture and export. See the [RoomPlan validation plan](../testing/ios-roomplan-validation.md).
+See [Windows backend instructions](../development/windows.md), [general development notes](../how-to-dev.md), and [validation checklist](../testing/ios-roomplan-validation.md).

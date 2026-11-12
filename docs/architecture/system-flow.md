@@ -1,25 +1,52 @@
-# System flow
+# System flow — current and planned
 
-The [system architecture](architecture.md) defines the intended MVP path:
+[Chosen architecture](architecture.md) | [Technology stack](tech-stack.md)
 
-1. The Room Twin iOS app starts an Apple RoomPlan capture.
-2. RoomPlan provides structured source data.
-3. A versioned API adapter maps the source data to the backend contract.
-4. The app uploads the payload directly to the backend.
-5. The backend validates geometry and coordinates, then selects, scales, and places replacement furniture.
-6. The backend generates a GLB scene.
-7. The app downloads or shares the result.
+## Current working path (offline)
 
-## Current implementation
+~~~mermaid
+flowchart LR
+    A["Native Swift RoomScanner\nRoomPlan + ARKit"] --> B["Local room.usdz + room.json\n+ metadata.json"]
+    B --> C["Quick Look / Share files"]
+    B --> D["Approved backend/testdata fixtures"]
+    D -.-> E["Future OpenUSD replacement tests"]
+~~~
 
-The mobile foundation currently covers RoomPlan capture and local source JSON export, inspection, and sharing. It does not yet map the source into the API contract or upload it.
+- The native app (`RoomScanner/`) starts and finishes scans, exports the local bundle, previews its USDZ and shares scan files.
+- A real scan is checked into `backend/testdata/` and can be used on Windows or Linux to develop the backend independently of the iPhone.
+- FastAPI already provides `GET /health` and a `POST /scans` JSON-validation stub. **The iOS app does not call it, and it does not process or save scans.**
+- Apple's example catalog and model assets are available as input/reference material; there is **no functioning Python replacement pipeline yet**.
 
-The backend currently exposes a health endpoint and validates a provisional versioned source envelope, returning a stub response. It does not persist or transform scan content. Furniture replacement and GLB generation are not implemented. Native RoomPlan export remains to be checked with an EAS development build on a physical compatible device. See the [Windows guide](../development/windows.md) for build and device steps.
+## Intended end-to-end workflow (not yet implemented)
 
-## Responsibilities
+~~~mermaid
+flowchart TD
+    IOS["Swift/SwiftUI iOS app\nRoomPlan capture"] --> RAW["USDZ + JSON + metadata"]
+    RAW -. "planned authenticated upload" .-> API["FastAPI ingest / job"]
+    API -.-> USD["Python + usd-core / OpenUSD"]
+    MODELS["Asset catalog\nApple sample as blueprint"] -.-> USD
+    USD -.-> OUTPUT["Enhanced USDZ"]
+    OUTPUT -. "planned download" .-> IOS
+    IOS --> VIEW["Quick Look / share USDZ"]
+~~~
 
-- **iOS app:** native capture, source data handling, eventual API call, progress and error display, and result delivery.
-- **Backend:** input validation, geometry and transform handling, asset selection, and GLB generation.
-- **Asset library:** replacement models; a local library is sufficient for the initial pipeline.
+1. Export a RoomPlan scene and structured metadata on device.
+2. **Planned:** transmit the scan bundle through FastAPI. The transport contract (such as multipart fields, job IDs and error model) must still be designed.
+3. **Planned:** validate and open the USDZ, locate object meshes by their UUIDs and match the corresponding JSON categories/attributes.
+4. **Planned:** select compatible assets; compute pivots and transforms, scale and place them, and preserve existing walls, floors and openings.
+5. **Planned:** create a standalone enhanced USDZ with all dependencies included.
+6. **Planned:** make the enhanced USDZ available to the Swift app for Quick Look and sharing.
 
-A 3D viewer or editor may follow the MVP. It is outside the first MVP scope.
+The source USDZ is the starting geometry; the JSON provides recognition metadata. A replacement object should not cause reconstruction or destruction of the rest of the room. Unmatched objects stay as placeholders.
+
+## Transition checklist
+
+- [x] Native RoomPlan app exports a genuine USDZ and companion JSON.
+- [x] Approved source scan fixture available in `backend/testdata/`.
+- [x] FastAPI scaffold and basic tests exist.
+- [ ] Python/OpenUSD asset indexing, substitution and USDZ packaging.
+- [ ] Versioned file-upload / processing / result-download API.
+- [ ] Swift app upload and processed-model download.
+- [ ] Offline geometry tests plus full device-to-backend validation.
+
+See [verification plan](../testing/ios-roomplan-validation.md). No GLB output step is part of the selected flow.

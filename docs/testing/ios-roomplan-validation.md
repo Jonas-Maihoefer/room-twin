@@ -1,43 +1,45 @@
-# Testplan – RoomPlan in der eigenen iOS-App
+# Testplan – Native RoomPlan-App und USDZ-Ersatzmodelle
 
-**Status: geplant; noch nicht durchgeführt.** Der Testplan dient der Verifikation der festgelegten Architektur: eigene iOS-App mit Apple RoomPlan und direkter Backend-Anbindung.
+**Status (12.11.2026):** Ein echter Scan mit der **Swift-/SwiftUI-App** ist gelungen. Die vollständige Kette **iPhone → FastAPI → Python/OpenUSD → ersetzte USDZ → iPhone** ist noch **nicht** implementiert oder nachgewiesen.
 
-[Systemarchitektur](../architecture/architecture.md) · [Systemablauf](../architecture/system-flow.md) · [Technikstack](../architecture/tech-stack.md)
+[Architektur](../architecture/architecture.md) · [Systemablauf](../architecture/system-flow.md) · [Technikstack](../architecture/tech-stack.md)
 
-## Testziel
+## Bereits vorliegende Nachweise
 
-Ein realer Raum wird in der eigenen App gescannt, die erfassten semantischen Daten werden direkt an die Backend-API übertragen und dort in ein GLB-Modell umgesetzt. Mindestens ein erkanntes Objekt wird durch ein geeignetes, korrekt positioniertes und skaliertes 3D-Asset ersetzt.
+- Die native App unter `RoomScanner/` (übernommen aus dem Branch `roomplanarkitapp`) verwendet Apples RoomPlan und ARKit; für echte Scans werden Xcode/macOS und ein unterstütztes LiDAR-Gerät benötigt.
+- Der erste reale Scan liegt in `backend/testdata/`: `room.usdz`, `room.json` und `metadata.json`. Laut Metadaten wurde er am **11.11.2026** auf einem iPhone mit **iOS 27.0.1** aufgezeichnet; Meter und Y-up-Koordinaten sind angegeben.
+- Das JSON enthält vier Wände, einen Boden, zwei Türen, ein Fenster und acht erkannte Objekte (drei Stühle, zwei Tische, zwei Stauraum-Objekte und ein Bett).
+- Die App kann bereits lokal exportierte USDZ-Dateien über Quick Look anzeigen und Dateien teilen. **Ein Backend-Upload wurde noch nicht getestet, da er nicht implementiert ist.**
 
-## Voraussetzungen
+## Testfälle für den Backend-Prototyp (noch offen)
 
-- Von RoomPlan unterstütztes LiDAR-fähiges iPhone oder iPad mit passender iOS-Version.
-- Auf dem Gerät installierter, signierter App-Build mit nativer RoomPlan-Integration; bei Expo ein **Development Build**, nicht nur Expo Go.
-- Erreichbares Test-Backend, abgestimmtes Upload-Schema und geeignete Ersatz-Assets.
-- Test-Raum mit messbaren Objekten und Flächen; Einwilligung zur Datennutzung.
-- Für gespeicherte Testdaten ausschließlich freigegebene oder anonymisierte Beispiele verwenden.
+| Test | Erwartung |
+| --- | --- |
+| USDZ öffnen | `usd-core` lädt die vollständige Szene einschließlich ihrer internen USDA-/USDC-Referenzen |
+| UUID-Abgleich | Objekte aus `room.json` werden den entsprechenden USD-Prims eindeutig zugeordnet |
+| Modellauswahl | Passende Kategorie/Attribute führen zu einem gültigen Modell aus dem Katalog |
+| Platzierung | Position, Drehung, Skalierung, Achsen und Einheiten stimmen mit dem erkannten Objekt überein |
+| Bestandsschutz | Wände, Boden, Türen, Fenster und nicht ersetzte Objekte bleiben erhalten |
+| Fehlendes Modell | Original-Platzhalter bleibt erhalten, Fehler wird dokumentiert |
+| Verpackung | Neue `.usdz` ist selbstständig ladbar und enthält alle referenzierten Geometrien/Materialien |
+| Darstellung | Ergebnis lässt sich in einem unabhängigen USDZ-Viewer sowie auf dem iPhone plausibel prüfen |
+| Robustheit | Defekte Archive, falsche IDs, zu große Dateien und inkonsistente Metadaten werden kontrolliert abgewiesen |
 
-## Testfälle
+Regressions- und Geometrieprüfungen gegen `backend/testdata/` sind erforderlich. Der Apple-Katalog ist nur ein erster Referenzsatz; er deckt nicht alle erkannten Möbel des Testscans ab.
 
-| Schritt | Erwartetes Ergebnis |
-|---|---|
-| App starten | App läuft auf echtem Gerät; Berechtigungen und Fehlerzustände sind verständlich |
-| Scan durchführen | RoomPlan-Scan lässt sich starten, abschließen und auslesen |
-| Raumdaten inspizieren | Kategorien, Abmessungen, Positionen, Orientierungen und Flächen sind nachvollziehbar |
-| API-Payload erzeugen | Schema ist gültig und Einheiten/Koordinatentransformationen bleiben konsistent |
-| Direkt hochladen | App überträgt die Daten an die API; Uploadfehler werden behandelt |
-| Assets einsetzen | Backend platziert mindestens ein Ersatz-Asset im erwarteten Maßstab und an der richtigen Position |
-| GLB generieren | Datei kann unabhängig geöffnet und auf Plausibilität geprüft werden |
-| Ergebnis bereitstellen | Die App kann die GLB-Datei herunterladen und teilen |
-| Fehlerfälle auslösen | Fehlende Berechtigungen, ungültige Daten, Netzwerkunterbrechung und Serverfehler sind kontrolliert behandelbar |
+## End-to-End-Testfälle (erst nach API-Integration)
 
-## Qualitätssicherung
+1. Scan mit der Swift-App starten, abschließen und die drei Quelldateien erzeugen.
+2. Über die künftig implementierte und abgesicherte FastAPI-Schnittstelle USDZ, JSON und Metadaten übertragen.
+3. Verarbeitungsstatus, Fehlermeldungen und Ergebnisbereitstellung prüfen.
+4. Nachweislich mindestens ein Möbelstück durch ein detailliertes Asset ersetzen, ohne Raumgeometrie zu beschädigen.
+5. Fertige **USDZ** auf das iPhone laden, mit Quick Look ansehen und teilen.
+6. Netzwerkausfall, ungültige Dateien, fehlende Berechtigungen und einen zweiten Scan testen.
 
-Raumgeometrie, Wände/Öffnungen, Möbelkategorien, Abmessungen, Positionen und Rotationen mit dem realen Raum vergleichen. Fehlende oder falsch erkannte Merkmale dokumentieren. Freigegebene, anonymisierte API-Fixtures sind hilfreich für reproduzierbare Backendtests; sie ersetzen **keine reale Geräteintegration**.
+Ergebnis je Lauf mit Gerätemodell, iOS-Version, App-Commit, Backend-Commit, Testscan und Auffälligkeiten dokumentieren. Private Räume und Kamerabilder nicht veröffentlichen.
 
-Für jeden Testlauf Datum, Gerätemodell, iOS-Version, App-Build, RoomPlan-/Wrapper-Version, Backend-Commit und Ergebnisse je Testfall dokumentieren. Ggf. nur unbedenkliche, freigegebene Artefakte verlinken.
+## MVP-Abnahme
 
-## MVP-Abnahmekriterium
+Erst wenn **nativer RoomPlan-Scan → FastAPI-Upload → Python/`usd-core`-Möbelersetzung → gültige neue USDZ → Anzeige/Teilen auf dem iPhone** nachweislich funktioniert, ist die gesamte Pipeline abgenommen.
 
-Der Ablauf **Scan in eigener App → strukturierte Daten → direkter Upload → Ersatz-Asset → GLB → Download/Teilen** funktioniert auf einem realen unterstützten Gerät. Die Lage und Skalierung mindestens eines Ersatzobjekts sind überprüft.
-
-**Dieses Kriterium gilt erst nach einem dokumentierten erfolgreichen Test als erfüllt.**
+Der reale Ausgangsscan erfüllt bereits die **Capture-/Export-Voraussetzung**, ersetzt aber weder einen Backend-Test noch einen vollständigen Ende-zu-Ende-Test.

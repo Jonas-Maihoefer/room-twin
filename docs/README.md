@@ -1,22 +1,24 @@
-# Documentation
+# Room Twin documentation
 
-**Architecture status: chosen.** Room Twin uses a custom iOS app with Apple RoomPlan and direct backend integration. Open implementation details do not change that architecture decision.
+**Decision:** native Swift/SwiftUI + RoomPlan/ARKit for scanning; Python/FastAPI + OpenUSD (`usd-core`) for planned furniture replacement; **USDZ input and output**. The app-to-backend upload is not yet implemented.
 
 ## Architecture
 
-1. [System architecture](architecture/architecture.md) — components, responsibilities, MVP scope, and integration boundaries.
-2. [System flow](architecture/system-flow.md) — the intended path from room scan to model delivery, with the current implementation boundary.
-3. [Technology stack](architecture/tech-stack.md) — chosen requirements, implementation technologies, and validation status.
+- [Architecture](architecture/architecture.md) — selected components, source data, ownership, and API boundaries.
+- [System flow](architecture/system-flow.md) — current offline workflow versus planned FastAPI/processing path.
+- [Technology stack](architecture/tech-stack.md) — chosen tools, formats, implementation status, and compatibility notes.
 
 ## Development
 
-- [How to dev](how-to-dev.md) — setup and daily development routine.
-- [Windows development](development/windows.md) — EAS signing, device registration, networking, and troubleshooting.
+- [How to develop](how-to-dev.md) — Swift scanner and backend quick starts; current feature boundary.
+- [Windows backend development](development/windows.md) — Python, FastAPI, tests, and offline USDZ fixture development only.
 
 ## Verification
 
-- [iOS RoomPlan and end-to-end validation](testing/ios-roomplan-validation.md) — plan for proving the real scan-to-model pipeline on a supported device.
+- [RoomPlan capture and USDZ pipeline validation](testing/ios-roomplan-validation.md) — completed real-device capture and outstanding integration checks.
 
-## Current implementation
+## Source locations
 
-The repository contains an Expo app foundation and a FastAPI scaffold. The app can exercise the native capture/export path, but physical-device validation remains pending. The backend ingestion route is a provisional stub; the complete upload, furniture replacement, and GLB pipeline are not implemented.
+The native app lives in [`../RoomScanner/`](../RoomScanner/) (sourced from the `roomplanarkitapp` branch). The Python backend is in [`../backend/`](../backend/). Apple's [custom-models sample](../ProvidingCustomModelsForCapturedRoomsAndStructureExports/) is retained as a design reference and asset library, not as an active backend service.
+
+The obsolete Expo/React Native `apps/` directory and its mobile build workflow have been removed. The documented FastAPI upload and enhanced USDZ download are **future work**, not features of the existing `POST /scans` stub.
