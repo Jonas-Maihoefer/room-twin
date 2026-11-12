@@ -97,15 +97,10 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
         replacement.GetPrim().SetCustomDataByKey("UUID", item.match.uuid)
         source_matrix = UsdGeom.Xformable(obj).GetLocalTransformation()
         UsdGeom.Xformable(replacement).AddTransformOp().Set(Gf.Matrix4d(source_matrix))
-        # Keep the verified placeholder mesh's authored rotation and place the
-        # fitted replacement at the placeholder's local-space bounds center.
-        source_mesh = UsdGeom.Mesh(meshes[0])
-        points = source_mesh.GetPointsAttr().Get() or []
-        if not points:
-            raise ReplacementError(f"placeholder mesh has no points for {item.match.uuid}")
-        point_min = tuple(min(float(point[i]) for point in points) for i in range(3))
-        point_max = tuple(max(float(point[i]) for point in points) for i in range(3))
-        geometry_center = Gf.Vec3d(*((point_min[i] + point_max[i]) / 2 for i in range(3)))
+        # The furniture prim's local origin is the RoomPlan placement frame.
+        # Proxy mesh points need not be centered on it (for example, the focus
+        # chair's raw point bounds are 16.8 cm below its prim origin). Centering
+        # a replacement on those points transfers proxy asymmetry to the model.
         model_prim = UsdGeom.Xform.Define(stage, replacement.GetPath().AppendChild("Model"))
         model_prim.GetPrim().GetReferences().AddReference(relative)
         asset_stage = Usd.Stage.Open(str(dep))
@@ -147,8 +142,7 @@ def apply_replacements(usdz_path: str | Path, scan: RoomPlanScan, catalog: Asset
         for mesh in meshes:
             UsdGeom.Imageable(mesh).MakeInvisible()
         xform = UsdGeom.Xformable(model_prim)
-        local_target_center = Gf.Vec3d(*geometry_center)
-        xform.AddTranslateOp().Set(Gf.Vec3d(*(translation[i] + local_target_center[i] for i in range(3))))
+        xform.AddTranslateOp().Set(Gf.Vec3d(*translation))
         xform.AddScaleOp().Set(Gf.Vec3f(*scale))
     stage.GetRootLayer().Save()
 

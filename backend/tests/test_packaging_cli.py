@@ -115,20 +115,31 @@ def test_real_scan_cli_usdz_is_self_contained_and_preserves_architecture(tmp_pat
     # exercises a fresh process with no access to the backend asset catalog.
     isolated = tmp_path / "isolated"
     isolated.mkdir()
-    script = (
-        "from pxr import Sdf, Usd, UsdGeom, UsdUtils; import os, sys; "
-        "s=Usd.Stage.Open(sys.argv[1]); assert s and s.GetDefaultPrim(); "
-        "m=[p for p in s.Traverse() if p.IsA(UsdGeom.Mesh)]; assert len(m)>0; "
-        "d=UsdUtils.ComputeAllDependencies(Sdf.AssetPath(s.GetRootLayer().identifier)); assert not d[-1], d[-1]; "
-        "assert not [l.identifier for l in s.GetUsedLayers() if os.path.isabs(l.identifier) "
-        "and os.path.normcase(l.identifier) != os.path.normcase(sys.argv[1]) "
-        "and '[' not in l.identifier], "
-        "[l.identifier for l in s.GetUsedLayers() if os.path.isabs(l.identifier) "
-        "and os.path.normcase(l.identifier) != os.path.normcase(sys.argv[1]) and '[' not in l.identifier]; "
-        "assert not [a for a in d[1] if os.path.isabs(a) and os.path.normcase(a) != os.path.normcase(sys.argv[1]) "
-        "and not os.path.normcase(a).startswith(os.path.normcase(sys.argv[1])+'[')], d[1]; "
-        "assert any('RoomTwinReplacement_' in str(p.GetPath()) for p in s.Traverse())"
-    )
+    script = f'''\
+from pxr import Gf, Sdf, Usd, UsdGeom, UsdUtils
+import os, sys
+s = Usd.Stage.Open(sys.argv[1])
+assert s and s.GetDefaultPrim()
+assert any(p.IsA(UsdGeom.Mesh) for p in s.Traverse())
+d = UsdUtils.ComputeAllDependencies(Sdf.AssetPath(s.GetRootLayer().identifier))
+assert not d[-1], d[-1]
+assert any("RoomTwinReplacement_" in str(p.GetPath()) for p in s.Traverse())
+assert not [l.identifier for l in s.GetUsedLayers() if os.path.isabs(l.identifier)
+            and os.path.normcase(l.identifier) != os.path.normcase(sys.argv[1]) and "[" not in l.identifier]
+cache = UsdGeom.XformCache(Usd.TimeCode.Default())
+entries = {[(e['uuid'], e['prim_path']) for e in replaced]!r}
+for uuid, object_path in entries:
+    obj = s.GetPrimAtPath(object_path)
+    replacement = s.GetPrimAtPath(obj.GetParent().GetPath().AppendChild(
+        "RoomTwinReplacement_" + uuid.replace("-", "")))
+    inverse = cache.GetLocalToWorldTransform(replacement).GetInverse()
+    points = [inverse.Transform(cache.GetLocalToWorldTransform(mesh).Transform(Gf.Vec3d(point)))
+              for mesh in Usd.PrimRange(replacement) if mesh.IsA(UsdGeom.Mesh)
+              for point in (UsdGeom.Mesh(mesh).GetPointsAttr().Get() or [])]
+    center = [((min(point[i] for point in points) + max(point[i] for point in points)) / 2)
+              for i in range(3)]
+    assert max(abs(center[i]) for i in range(3)) < 0.005, (uuid, center)
+'''
     completed = subprocess.run([sys.executable, "-c", script, str(output)], cwd=isolated,
                                env={k: v for k, v in os.environ.items() if k not in {"PYTHONPATH", "PXR_PLUGINPATH_NAME"}},
                                text=True, capture_output=True)
