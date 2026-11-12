@@ -1,38 +1,33 @@
-# Chosen system architecture
+# Room Twin architecture
 
-Room Twin's MVP uses a custom iOS app with Apple RoomPlan and a directly connected backend.
+## Components
 
-## Intended MVP flow
+- **Scanner:** native Swift and SwiftUI using RoomPlan for room geometry and furniture recognition and ARKit for the scan session.
+- **Processor:** Python 3.12, using OpenUSD through the pinned usd-core==26.11 package. The offline processor reads scan USDZ and JSON, matches furniture, replaces supported objects and packages a standalone USDZ.
+- **API scaffold:** FastAPI exposes GET /health and a provisional JSON-only POST /scans stub. The stub is not a file upload, persistence or processing service.
+- **Interchange:** USDZ input and output. There is no active GLB conversion workflow.
 
-1. A user scans a room inside the Room Twin app on a supported LiDAR iPhone or iPad.
-2. The app receives structured RoomPlan data about surfaces, openings, and recognized objects.
-3. A versioned adapter prepares a payload that matches the backend contract. RoomPlan does not define Room Twin's API schema.
-4. The app sends the payload directly to the backend.
-5. The backend validates the input and coordinate systems, processes room geometry, and places suitable 3D assets.
-6. The backend makes a GLB available for the app to download and share.
+## Implemented behavior
 
-## Responsibilities
+| Component | Current behavior |
+| --- | --- |
+| [RoomScanner](../../RoomScanner/) | RoomPlan capture; exports USDZ, JSON and metadata; previews/shares local files |
+| Offline CLI | Opens the RoomPlan USDZ and JSON, uses metadata when supplied, replaces supported furniture, writes a USDZ and JSON report |
+| Asset catalog | Backend-owned catalog maps RoomPlan category and exact attribute sets to .usdc model files; category defaults are supported |
+| Fallback | Objects without a catalog match retain their original geometry and are reported as preserved |
+| USDZ validation | Reopens the package, validates the default prim and dependencies, replacement/preserved mesh presence, UUID identity, transforms, bounds and architecture |
+| CI | Linux GitHub Actions installs the backend extras and runs the complete pytest suite |
 
-| Component | Responsibility |
-|---|---|
-| iOS app | Start and finish scans, show progress and errors, prepare and upload data, retrieve and share results |
-| RoomPlan integration | Capture rooms with LiDAR and provide Apple's structured room and object data |
-| API adapter | Map source data into a versioned backend payload while preserving dimensions, categories, transforms, surfaces, and openings |
-| Backend API | Validate uploads, start or perform processing, handle errors, and provide results |
-| Geometry and asset pipeline | Interpret room geometry, select replacement assets, scale and place them, and build a scene |
-| Asset library | Provide suitable 3D models for recognized object categories |
-| Model export | Produce a usable GLB file |
+The checked-in real scan has eight furniture objects: three chairs, two tables, one shelf, one cabinet and one bed. The default catalog replaces the chairs, tables and shelf. The cabinet and bed are preserved because they have no matching model. All architecture remains in the scene.
 
-## Current implementation boundary
+## Data flow and boundaries
 
-The app foundation in this repository exercises RoomPlan capture, reads the exported source JSON, and displays and shares that file. Its wrapper is isolated behind an adapter. The backend provides a health endpoint and a provisional versioned scan-ingestion envelope; it validates the envelope and returns a stub response without storing or transforming scan content.
+The iOS scanner exports room.usdz, room.json, and metadata.json. Developers currently pass these files as local CLI inputs. The parser uses RoomPlan UUIDs to correlate JSON furniture with USD prims and applies category/attribute model selection from backend/assets/catalog.json. OpenUSD edits a working copy, references backend models, and packages the result with dependencies localized inside a standalone USDZ. A versioned JSON report records each furniture decision and validation diagnostics.
 
-The source export and backend payload are separate formats. The actual RoomPlan fields and export behavior must be inspected on-device before defining a mapping. The provisional source payload is opaque and does not assign Room Twin meaning to Apple's fields. This foundation does not implement API upload from the app, furniture matching, geometry processing, GLB generation, or production storage.
+The processor preserves unmatched placeholders and architectural geometry. RoomPlan dimensions use metres and Y-up coordinates in the current scan contract. Catalog models must declare units, up axis, pivot and scaling policy; the current assets are metre, Y-up .usdc models. See the [asset extension guide](../../backend/docs/adding-assets.md).
 
-The Expo RoomPlan wrapper is a candidate integration. Expo Go does not include this native module. The app targets iOS 17 based on the wrapper's podspec and config plugin, but only a successful EAS build and physical-device JSON inspection can validate the path.
+## Planned transport
 
-## MVP scope and constraints
+Swift-to-FastAPI upload and result download are not implemented. The current POST /scans endpoint accepts only a JSON envelope and responds accepted-stub; it does not accept the USDZ/JSON bundle, store files, trigger the processor or return an enhanced scene. Authentication, persistence, jobs and the transport contract remain future work.
 
-The first MVP demonstrates scan in the app, structured data transfer, direct backend upload, at least one correctly scaled and positioned replacement asset, GLB generation, and download or sharing in the app. A 3D viewer or editor is a later extension, not a requirement for this MVP.
-
-The API schema, error model, upload limits, authentication, temporary storage, and result retrieval behavior remain to be designed. Indoor scans can contain sensitive information; use secured transfer and do not commit private room captures.
+The scanner and offline backend work independently, so a Mac or iPhone is not required to run backend processing against the approved fixture. Building and running the Swift app does require macOS/Xcode and compatible hardware.

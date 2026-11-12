@@ -1,14 +1,4 @@
-# JavaScript / Expo
-node_modules/
-.npm/
-.npm-cache/
-.expo/
-.expo-cli-home/
-dist/
-web-build/
-*.tsbuildinfo
-
-# Python
+# Python backend
 .venv/
 venv/
 __pycache__/
@@ -18,7 +8,15 @@ __pycache__/
 *.egg-info/
 build/
 
-# Local configuration and credentials
+# Xcode and Swift local/generated files
+.DS_Store
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+.build/
+
+# Local configuration, keys and provisioning
 .env
 .env.*
 !.env.example
@@ -27,10 +25,7 @@ build/
 *.mobileprovision
 credentials.json
 
-# Scan captures and generated native/build outputs
-*.usd
-*.roomplan.json
+# Private captures and generated model output
 scan-captures/
-ios/
-android/
-build/
+processed-scans/
+frames/

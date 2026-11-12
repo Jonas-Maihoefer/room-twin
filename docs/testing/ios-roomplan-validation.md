@@ -1,43 +1,40 @@
-# Testplan – RoomPlan in der eigenen iOS-App
+# RoomPlan and USDZ validation
 
-**Status: geplant; noch nicht durchgeführt.** Der Testplan dient der Verifikation der festgelegten Architektur: eigene iOS-App mit Apple RoomPlan und direkter Backend-Anbindung.
+## Implemented offline verification
 
-[Systemarchitektur](../architecture/architecture.md) · [Systemablauf](../architecture/system-flow.md) · [Technikstack](../architecture/tech-stack.md)
+The Swift scanner produces RoomPlan USDZ, JSON and metadata files. The backend can process those files independently through the Python CLI; no iOS-to-FastAPI connection is required or implemented.
 
-## Testziel
+From backend/, install the pinned CPython 3.12 dependencies and run:
 
-Ein realer Raum wird in der eigenen App gescannt, die erfassten semantischen Daten werden direkt an die Backend-API übertragen und dort in ein GLB-Modell umgesetzt. Mindestens ein erkanntes Objekt wird durch ein geeignetes, korrekt positioniertes und skaliertes 3D-Asset ersetzt.
+~~~bash
+python -m pip install -e ".[dev]"
+python -m app.usd.cli replace \
+  --usdz testdata/room.usdz \
+  --json testdata/room.json \
+  --metadata testdata/metadata.json \
+  --output output/testscan-enhanced.usdz
+python -m pytest
+~~~
 
-## Voraussetzungen
+The test suite covers matching and fallback, transformations and model-local offsets, repeated categories, architecture preservation, package references, report contents, error handling, and real-scan integration. The CLI reopens its package and checks dependency resolution and geometry. A clean-process open check can be run with the command in the [Windows guide](../development/windows.md).
 
-- Von RoomPlan unterstütztes LiDAR-fähiges iPhone oder iPad mit passender iOS-Version.
-- Auf dem Gerät installierter, signierter App-Build mit nativer RoomPlan-Integration; bei Expo ein **Development Build**, nicht nur Expo Go.
-- Erreichbares Test-Backend, abgestimmtes Upload-Schema und geeignete Ersatz-Assets.
-- Test-Raum mit messbaren Objekten und Flächen; Einwilligung zur Datennutzung.
-- Für gespeicherte Testdaten ausschließlich freigegebene oder anonymisierte Beispiele verwenden.
+The checked-in scan contains eight furniture objects. Expected outcome with the default catalog: three chairs, two tables and one shelf are replaced; one cabinet and one bed are kept as placeholders because matching assets are unavailable. Preserving unmatched objects is intentional. Architectural geometry must remain intact.
 
-## Testfälle
+## What automated validation establishes
 
-| Schritt | Erwartetes Ergebnis |
-|---|---|
-| App starten | App läuft auf echtem Gerät; Berechtigungen und Fehlerzustände sind verständlich |
-| Scan durchführen | RoomPlan-Scan lässt sich starten, abschließen und auslesen |
-| Raumdaten inspizieren | Kategorien, Abmessungen, Positionen, Orientierungen und Flächen sind nachvollziehbar |
-| API-Payload erzeugen | Schema ist gültig und Einheiten/Koordinatentransformationen bleiben konsistent |
-| Direkt hochladen | App überträgt die Daten an die API; Uploadfehler werden behandelt |
-| Assets einsetzen | Backend platziert mindestens ein Ersatz-Asset im erwarteten Maßstab und an der richtigen Position |
-| GLB generieren | Datei kann unabhängig geöffnet und auf Plausibilität geprüft werden |
-| Ergebnis bereitstellen | Die App kann die GLB-Datei herunterladen und teilen |
-| Fehlerfälle auslösen | Fehlende Berechtigungen, ungültige Daten, Netzwerkunterbrechung und Serverfehler sind kontrolliert behandelbar |
+OpenUSD tests and the JSON report check scene composition, UUID identity, replacement meshes, transforms, measured bounds, architecture, package-contained dependencies and missing-model fallback. The source fixture is treated as read-only; integration tests verify its content/hash remains unchanged. These checks do not render the result and do not prove perceptual quality, material appearance or Apple Quick Look compatibility.
 
-## Qualitätssicherung
+## Manual viewer check
 
-Raumgeometrie, Wände/Öffnungen, Möbelkategorien, Abmessungen, Positionen und Rotationen mit dem realen Raum vergleichen. Fehlende oder falsch erkannte Merkmale dokumentieren. Freigegebene, anonymisierte API-Fixtures sind hilfreich für reproduzierbare Backendtests; sie ersetzen **keine reale Geräteintegration**.
+After generating output/testscan-enhanced.usdz, open it in Apple Quick Look/Reality Composer or another compatible USDZ viewer. Check that:
 
-Für jeden Testlauf Datum, Gerätemodell, iOS-Version, App-Build, RoomPlan-/Wrapper-Version, Backend-Commit und Ergebnisse je Testfall dokumentieren. Ggf. nur unbedenkliche, freigegebene Artefakte verlinken.
+- walls, floor, doors, windows and openings remain present;
+- replacements are oriented and sized plausibly and are not clipped or displaced;
+- the cabinet and bed placeholders remain;
+- the enhanced file opens without missing assets.
 
-## MVP-Abnahmekriterium
+The repository's geometry diagnostic is in [furniture-placement-diagnostic.md](../../backend/docs/furniture-placement-diagnostic.md). If no compatible viewer is available, report that rendered inspection was not performed; do not infer it from structural checks.
 
-Der Ablauf **Scan in eigener App → strukturierte Daten → direkter Upload → Ersatz-Asset → GLB → Download/Teilen** funktioniert auf einem realen unterstützten Gerät. Die Lage und Skalierung mindestens eines Ersatzobjekts sind überprüft.
+## Planned device/API test
 
-**Dieses Kriterium gilt erst nach einem dokumentierten erfolgreichen Test als erfüllt.**
+Swift-to-FastAPI scan upload and enhanced USDZ download are not implemented. POST /scans is only a JSON validation stub. A future end-to-end transport test must cover upload, processing orchestration, result retrieval, failure handling and preview on a supported iOS device.
