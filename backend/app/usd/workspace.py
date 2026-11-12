@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import zipfile
+import shutil
 from pathlib import Path, PurePosixPath
 
 
@@ -10,6 +11,13 @@ class WorkspaceError(ValueError):
 
 
 MAX_UNPACKED = 2 * 1024 * 1024 * 1024
+# RoomPlan exports are small; 10,000 entries leaves ample headroom for
+# referenced geometry while bounding per-entry filesystem overhead.
+MAX_ARCHIVE_ENTRIES = 10_000
+# Count normalized directory components below the archive root. For a file,
+# count only its parent components; for an explicit directory, count the
+# directory itself too. 8 levels permits common asset/lod/texture layouts.
+MAX_DIRECTORY_DEPTH = 8
 
 
 def extract_usdz(source: str | Path, destination: str | Path) -> Path:
@@ -18,6 +26,10 @@ def extract_usdz(source: str | Path, destination: str | Path) -> Path:
     try:
         with zipfile.ZipFile(source) as archive:
             infos = archive.infolist()
+            if len(infos) > MAX_ARCHIVE_ENTRIES:
+                raise WorkspaceError(
+                    f"USDZ archive entry count exceeds the {MAX_ARCHIVE_ENTRIES} entry limit"
+                )
             seen: set[str] = set()
             total = 0
             root_candidate = None
@@ -29,6 +41,14 @@ def extract_usdz(source: str | Path, destination: str | Path) -> Path:
                 if (path.is_absolute() or not path.parts or "\x00" in raw
                         or any(part in {"..", "."} or ":" in part for part in path.parts)):
                     raise WorkspaceError(f"unsafe USDZ entry path: {info.filename!r}")
+                # PurePosixPath normalizes repeated separators and leading './';
+                # count the resulting components consistently for files and dirs.
+                depth = len(path.parts) if info.is_dir() else len(path.parts) - 1
+                if depth > MAX_DIRECTORY_DEPTH:
+                    raise WorkspaceError(
+                        f"USDZ entry nesting depth exceeds the {MAX_DIRECTORY_DEPTH} directory limit: "
+                        f"{info.filename!r}"
+                    )
                 if key in seen:
                     raise WorkspaceError(f"duplicate or colliding USDZ entry: {info.filename!r}")
                 seen.add(key)
@@ -50,8 +70,13 @@ def extract_usdz(source: str | Path, destination: str | Path) -> Path:
                     with archive.open(info) as src, target.open("xb") as dst:
                         while chunk := src.read(1024 * 1024):
                             dst.write(chunk)
-    except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
+    except WorkspaceError:
+        shutil.rmtree(destination, ignore_errors=True)
+        raise
+    except Exception as exc:
+        shutil.rmtree(destination, ignore_errors=True)
         raise WorkspaceError(f"cannot safely extract USDZ {source}: {exc}") from exc
     if root_candidate is None or not root_candidate.is_file():
+        shutil.rmtree(destination, ignore_errors=True)
         raise WorkspaceError("USDZ contains no supported USD layers")
     return root_candidate

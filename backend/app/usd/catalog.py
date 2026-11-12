@@ -38,9 +38,10 @@ class AssetCatalog:
     an Apple ``.empty`` marker as a model.
     """
 
-    def __init__(self, root: Path, models: tuple[CatalogModel, ...]):
+    def __init__(self, root: Path, models: tuple[CatalogModel, ...], catalog_version: int | None = None):
         self.root = root.resolve()
         self.models = models
+        self.catalog_version = catalog_version
         self._by_key = {(m.category, tuple(sorted(m.attributes.items()))): m for m in models if m.attributes}
         self._defaults = {m.category: m for m in models if not m.attributes}
 
@@ -114,7 +115,7 @@ class AssetCatalog:
                 if model.up_axis != "unknown" and actual_axis != model.up_axis:
                     raise CatalogError(f"{path_value} declares {model.up_axis}-up, USD stage reports {actual_axis}-up")
             models.append(model)
-        return cls(root, tuple(models))
+        return cls(root, tuple(models), document["catalog_version"])
 
     def match(self, category: str, attributes: Mapping[str, str] | None = None) -> CatalogMatch:
         """Return a specific model, a category default, or explicit missing."""

@@ -1,12 +1,16 @@
 from pathlib import Path
 import hashlib
 import shutil
+import zipfile
+from uuid import UUID
 
 import pytest
 from pxr import Gf, Usd, UsdGeom
 
-from app.usd import AssetCatalog, load_roomplan_scan, process_roomplan, read_usdz_inventory
+from app.usd import AssetCatalog, RoomPlanScan, apply_replacements, load_roomplan_scan, process_roomplan, read_usdz_inventory
 from app.usd.catalog import CatalogModel
+from app.usd.scan_parser import ScanElement
+from app.usd.scene_reader import SceneInventory, SourceLayer
 
 BACKEND = Path(__file__).parents[1]
 TOLERANCE_METRES = 0.002
@@ -87,10 +91,8 @@ def test_real_scan_replacements_are_visible_and_preserve_world_placement(tmp_pat
         if item.model:
             original_meshes = [p for p in Usd.PrimRange(obj) if p.IsA(UsdGeom.Mesh)]
             old_world = original_xforms.GetLocalToWorldTransform(obj)
-            old_lo, old_hi = composed_mesh_bounds(
-                original_meshes, original_xforms, frame_inverse=old_world.GetInverse())
             old_poses[item.match.uuid] = (
-                old_world, old_world.Transform((old_lo + old_hi) * 0.5),
+                old_world, old_world.Transform((0, 0, 0)),
             )
         else:
             preserved_before[item.match.uuid] = tuple(
@@ -138,13 +140,17 @@ def test_real_scan_replacements_are_visible_and_preserve_world_placement(tmp_pat
             assert obj.GetCustomData().get("UUID", "").lower() == item.match.uuid
             assert obj.GetCustomData().get("Category", "").lower() == item.match.source.category
 
-            # In the placeholder's oriented local frame, the fitted model has
-            # the detected dimensions. This avoids comparing rotated world AABBs.
+            # In the RoomPlan prim's oriented local frame, the fitted model has
+            # the detected dimensions and its geometry center is at the prim
+            # origin. World AABBs would mix furniture rotation into dimensions.
             replacement_world = world_cache.GetLocalToWorldTransform(replacement)
             model_lo, model_hi = composed_mesh_bounds(
                 replacement_meshes, world_cache, frame_inverse=replacement_world.GetInverse())
             fitted = tuple(float(model_hi[axis] - model_lo[axis]) for axis in range(3))
             assert fitted == pytest.approx(item.match.source.dimensions, abs=TOLERANCE_METRES)
+            model_center = (model_lo + model_hi) * 0.5
+            assert tuple(float(model_center[i]) for i in range(3)) == pytest.approx(
+                (0, 0, 0), abs=WORLD_POSITION_TOLERANCE_METRES)
 
             old_world, old_center = old_poses[item.match.uuid]
             assert_matrix_pose_equal(replacement_world, old_world)
@@ -169,14 +175,14 @@ def test_real_scan_replacements_are_visible_and_preserve_world_placement(tmp_pat
     assert set(result.dependencies).issubset(used_layers)
 
 
-def make_unit_catalog(root: Path, meters_per_unit: float):
+def make_unit_catalog(root: Path, meters_per_unit: float, *, offset=(0, 0, 0)):
     units = {1.0: "metres", 0.01: "centimetres", 0.001: "millimetres"}[meters_per_unit]
     asset_path = root / "models" / "unit_asset.usda"
     asset_path.parent.mkdir(parents=True, exist_ok=True)
     # This cube is one physical metre wide at each authored unit scale.
     radius = 0.5 / meters_per_unit
     points = ", ".join(
-        f"({x * radius}, {y * radius}, {z * radius})"
+        f"({x * radius + offset[0]}, {y * radius + offset[1]}, {z * radius + offset[2]})"
         for x, y, z in ((-1,-1,-1),(1,-1,-1),(1,1,-1),(-1,1,-1),
                         (-1,-1,1),(1,-1,1),(1,1,1),(-1,1,1))
     )
@@ -200,6 +206,122 @@ def make_unit_catalog(root: Path, meters_per_unit: float):
             ("storage", shelf.attributes, "specific"))
     )
     return AssetCatalog(root, models)
+
+
+def test_offset_asset_pivot_and_rotated_placeholders_align_to_roomplan_origin(tmp_path):
+    # A deliberately displaced asset origin catches code that assumes a model
+    # pivot is its geometry center. The real scan supplies multiple yaw angles.
+    catalog = make_unit_catalog(tmp_path / "offset-catalog", 1.0, offset=(3.25, -1.5, 2.75))
+    source = BACKEND / "testdata/room.usdz"
+    original = Usd.Stage.Open(str(source))
+    result = process_roomplan(source, BACKEND / "testdata/room.json", catalog,
+                              tmp_path / "offset-workspace")
+    stage = Usd.Stage.Open(str(result.root_layer))
+    cache = UsdGeom.XformCache(Usd.TimeCode.Default())
+    yaw_bases = set()
+    for item in result.plan:
+        if not item.model:
+            continue
+        source_prim = original.GetPrimAtPath(item.match.layer.composed_prim_paths[0])
+        replacement = replacement_for(stage, item)[1]
+        meshes = [p for p in Usd.PrimRange(replacement) if p.IsA(UsdGeom.Mesh)]
+        root_world = cache.GetLocalToWorldTransform(replacement)
+        lo, hi = composed_mesh_bounds(meshes, cache, frame_inverse=root_world.GetInverse())
+        center = (lo + hi) * 0.5
+        assert tuple(float(center[i]) for i in range(3)) == pytest.approx((0, 0, 0), abs=0.002)
+        source_world = UsdGeom.XformCache(Usd.TimeCode.Default()).GetLocalToWorldTransform(source_prim)
+        assert tuple(float(root_world[3][i]) for i in range(3)) == pytest.approx(
+            tuple(float(source_world[3][i]) for i in range(3)), abs=0.002)
+        yaw_bases.add((round(float(root_world[0][0]), 2), round(float(root_world[0][2]), 2)))
+    assert len(yaw_bases) >= 3
+
+
+def test_synthetic_rotations_keep_identical_placeholders_centered(tmp_path):
+    source_dir = tmp_path / "synthetic-source"
+    source_dir.mkdir()
+    rotations = (0.0, 37.0, 121.0)
+    positions = ((-2.0, 0.0, 1.0), (0.5, 0.0, -0.75), (2.25, 0.0, 2.0))
+    ids = tuple(UUID(f"00000000-0000-4000-8000-{index:012d}") for index in range(1, 4))
+
+    # Three separate but geometrically identical RoomPlan proxy layers make a
+    # small real USD composition with distinct placement and yaw transforms.
+    source_layers = []
+    assets_dir = source_dir / "assets"
+    assets_dir.mkdir()
+    for identity in ids:
+        asset_path = assets_dir / f"{identity}.usda"
+        asset = Usd.Stage.CreateNew(str(asset_path))
+        UsdGeom.SetStageMetersPerUnit(asset, 1.0)
+        UsdGeom.SetStageUpAxis(asset, UsdGeom.Tokens.y)
+        asset.SetDefaultPrim(UsdGeom.Xform.Define(asset, "/Chair").GetPrim())
+        chair = asset.GetPrimAtPath("/Chair")
+        chair.SetCustomDataByKey("UUID", str(identity))
+        chair.SetCustomDataByKey("Category", "chair")
+        mesh = UsdGeom.Mesh.Define(asset, "/Chair/Proxy")
+        mesh.GetPointsAttr().Set([Gf.Vec3f(x, y, z) for x, y, z in (
+            (-0.5, -0.5, -0.5), (0.5, -0.5, -0.5), (0.5, 0.5, -0.5), (-0.5, 0.5, -0.5),
+            (-0.5, -0.5, 0.5), (0.5, -0.5, 0.5), (0.5, 0.5, 0.5), (-0.5, 0.5, 0.5),
+        )])
+        mesh.GetFaceVertexCountsAttr().Set([4] * 6)
+        mesh.GetFaceVertexIndicesAttr().Set([0, 1, 2, 3, 4, 7, 6, 5, 0, 4, 5, 1,
+                                             1, 5, 6, 2, 2, 6, 7, 3, 4, 0, 3, 7])
+        asset.GetRootLayer().Save()
+        source_layers.append(asset_path)
+
+    scene_path = source_dir / "scene.usda"
+    scene = Usd.Stage.CreateNew(str(scene_path))
+    UsdGeom.SetStageMetersPerUnit(scene, 1.0)
+    UsdGeom.SetStageUpAxis(scene, UsdGeom.Tokens.y)
+    room = UsdGeom.Xform.Define(scene, "/Room").GetPrim()
+    scene.SetDefaultPrim(room)
+    group = UsdGeom.Xform.Define(scene, "/Room/Furniture_grp/Chair_grp")
+    elements = []
+    inventory_records = []
+    for index, (identity, asset_path, yaw, position) in enumerate(zip(ids, source_layers, rotations, positions)):
+        name = f"Chair{index}"
+        prim = UsdGeom.Xform.Define(scene, group.GetPath().AppendChild(name))
+        prim.AddTranslateOp().Set(Gf.Vec3d(*position))
+        prim.AddRotateYOp().Set(yaw)
+        prim.GetPrim().GetReferences().AddReference(f"assets/{asset_path.name}", "/Chair")
+        matrix = Gf.Matrix4d().SetRotate(Gf.Rotation(Gf.Vec3d(0, 1, 0), yaw))
+        matrix.SetTranslate(Gf.Vec3d(*position))
+        transform = tuple(float(matrix[row][column]) for column in range(4) for row in range(4))
+        elements.append(ScanElement(identity, "chair", (1.0, 1.0, 1.0), transform,
+                                    attributes={}))
+        inventory_records.append(SourceLayer(
+            str(asset_path), f"{asset_path.name}", "chair", ("/Chair",),
+            (str(prim.GetPath()),), (str(identity),), (), (),
+        ))
+    scene.GetRootLayer().Save()
+    source_usdz = source_dir / "synthetic.usdz"
+    # This fixture only needs the USDZ extraction contract. Store all members
+    # uncompressed and keep the root USDA first, as required for USDZ packages.
+    with zipfile.ZipFile(source_usdz, "w", compression=zipfile.ZIP_STORED) as archive:
+        archive.write(scene_path, "scene.usda")
+        for asset_path in source_layers:
+            archive.write(asset_path, f"assets/{asset_path.name}")
+
+    scan = RoomPlanScan(tuple(elements), {}, "metres", "Y")
+    inventory = SceneInventory(str(scene_path), (), "Y", 1.0, {},
+                               tuple(inventory_records), tuple(inventory_records), (), ())
+    catalog = make_unit_catalog(tmp_path / "offset-catalog", 1.0, offset=(2.0, -3.0, 1.5))
+    result = apply_replacements(source_usdz, scan, catalog, inventory, tmp_path / "synthetic-workspace")
+    stage = Usd.Stage.Open(str(result.root_layer))
+    cache = UsdGeom.XformCache(Usd.TimeCode.Default())
+    replacement_origins = []
+    for item in result.plan:
+        source_prim = stage.GetPrimAtPath(item.match.layer.composed_prim_paths[0])
+        replacement = replacement_for(stage, item)[1]
+        meshes = [p for p in Usd.PrimRange(replacement) if p.IsA(UsdGeom.Mesh)]
+        root_world = cache.GetLocalToWorldTransform(replacement)
+        lo, hi = composed_mesh_bounds(meshes, cache, frame_inverse=root_world.GetInverse())
+        assert tuple(float(v) for v in (hi - lo)) == pytest.approx((1, 1, 1), abs=0.002)
+        assert tuple(float(v) for v in ((lo + hi) * 0.5)) == pytest.approx((0, 0, 0), abs=0.002)
+        source_world = cache.GetLocalToWorldTransform(source_prim)
+        assert tuple(float(root_world[3][i]) for i in range(3)) == pytest.approx(
+            tuple(float(source_world[3][i]) for i in range(3)), abs=0.002)
+        replacement_origins.append(tuple(round(float(root_world[3][i]), 3) for i in range(3)))
+    assert len(set(replacement_origins)) == 3
 
 
 @pytest.mark.parametrize("meters_per_unit", [1.0, 0.01, 0.001], ids=["metres", "centimetres", "millimetres"])
