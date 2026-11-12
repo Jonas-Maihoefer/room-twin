@@ -1,0 +1,592 @@
+{
+  "schema_version": "room-twin.asset-catalog.v1",
+  "catalog_version": 1,
+  "provenance": "Copied from Apple ProvidingCustomModelsForCapturedRoomsAndStructureExports sample RoomPlanCatalog.bundle; mapping follows its generated catalog.plist.",
+  "models": [
+    {
+      "category": "storage",
+      "attributes": {
+        "StorageType": "shelf"
+      },
+      "match_type": "specific",
+      "path": "models/Storage/Shelf/shelf_vertical.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Table/Default/DefaultTable.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "rectangular",
+        "TableType": "dining"
+      },
+      "match_type": "specific",
+      "path": "models/Table/DiningTable_rectangular/DiningTable_rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "circularElliptic",
+        "TableType": "dining"
+      },
+      "match_type": "specific",
+      "path": "models/Table/DiningTable_circularElliptic/DiningTable_circularElliptic.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "unidentified",
+        "TableType": "dining"
+      },
+      "match_type": "specific",
+      "path": "models/Table/DiningTable_unidentifiedShape/DiningTable_rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "rectangular",
+        "TableType": "coffee"
+      },
+      "match_type": "specific",
+      "path": "models/Table/CoffeeTable_rectangular/CoffeeTable_rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "circularElliptic",
+        "TableType": "coffee"
+      },
+      "match_type": "specific",
+      "path": "models/Table/CoffeeTable_circularElliptic/CoffeeTable_circularElliptic.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "lShaped",
+        "TableType": "coffee"
+      },
+      "match_type": "specific",
+      "path": "models/Table/CoffeeTable_lShaped/CoffeeTable_lshaped.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "unidentified",
+        "TableType": "coffee"
+      },
+      "match_type": "specific",
+      "path": "models/Table/CoffeeTable_unidentifiedShape/CoffeeTable_rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "rectangular",
+        "TableType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Table/Unidentified_rectangular/Unidentified_rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "circularElliptic",
+        "TableType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Table/Unidentified_circularElliptic/Unidentified_circularElliptic.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "lShaped",
+        "TableType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Table/Unidentified_lShaped/Unidentified_lShaped.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "table",
+      "attributes": {
+        "TableShapeType": "unidentified",
+        "TableType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Table/Unidentified_unidentifiedShape/Unidentified_rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "sofa",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Sofa/Default/Rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "sofa",
+      "attributes": {
+        "SofaType": "rectangular"
+      },
+      "match_type": "specific",
+      "path": "models/Sofa/Rectangular/Rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "sofa",
+      "attributes": {
+        "SofaType": "lShaped"
+      },
+      "match_type": "specific",
+      "path": "models/Sofa/LShaped/LShaped.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "sofa",
+      "attributes": {
+        "SofaType": "lShapedExtension"
+      },
+      "match_type": "specific",
+      "path": "models/Sofa/LShapedExtension/LShapedExtension.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "sofa",
+      "attributes": {
+        "SofaType": "singleSeat"
+      },
+      "match_type": "specific",
+      "path": "models/Sofa/SingleSeat/SingleSeat.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "sofa",
+      "attributes": {
+        "SofaType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Sofa/Unidentified/Rectangular.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Chair/Default/DefaultChair.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "existing",
+        "ChairLegType": "four",
+        "ChairType": "dining"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/DiningChair_wBack_fourLegs_wArms/DiningChair_wBack_fourLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "existing",
+        "ChairLegType": "four",
+        "ChairType": "dining"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/DiningChair_wBack_fourLegs_noArms/DiningChair_wBack_fourLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "missing",
+        "ChairLegType": "four",
+        "ChairType": "stool"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Stool_noBack_fourLegs_noArms/Stool_noBack_fourLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "missing",
+        "ChairLegType": "star",
+        "ChairType": "stool"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Stool_noBack_starLegs_noArms/Stool_noBack_starLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "missing",
+        "ChairLegType": "unidentified",
+        "ChairType": "stool"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Stool_noBack_unidentifiedLegs_noArms/Stool_noBack_unidentifiedLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "missing",
+        "ChairLegType": "four",
+        "ChairType": "stool"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Stool_noBack_fourLegs_wArms/Stool_noBack_fourLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "missing",
+        "ChairLegType": "star",
+        "ChairType": "stool"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Stool_noBack_starLegs_wArms/Stool_noBack_starLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "missing",
+        "ChairLegType": "unidentified",
+        "ChairType": "stool"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Stool_noBack_unidentifiedLegs_wArms/Stool_noBack_unidentifiedLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "existing",
+        "ChairLegType": "star",
+        "ChairType": "swivel"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Swivel_wBack_starLegs_wArms/Swivel_wBack_starLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "existing",
+        "ChairLegType": "star",
+        "ChairType": "swivel"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Swivel_wBack_starLegs_noArms/Swivel_wBack_starLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "existing",
+        "ChairLegType": "four",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_wBack_fourLegs_wArms/Unidentified_wBack_fourLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "existing",
+        "ChairLegType": "four",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_wBack_fourLegs_noArms/Unidentified_wBack_fourLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "existing",
+        "ChairLegType": "star",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_wBack_starLegs_wArms/Swivel_wBack_starLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "existing",
+        "ChairLegType": "star",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_wBack_starLegs_noArms/Swivel_wBack_starLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "existing",
+        "ChairLegType": "unidentified",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_wBack_unidentifiedLegs_wArms/Unidentified_wBack_otherLegType_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "existing",
+        "ChairLegType": "unidentified",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_wBack_unidentifiedLegs_noArms/Unidentified_wBack_otherLegType_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "missing",
+        "ChairLegType": "four",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_noBack_fourLegs_wArms/Stool_noBack_fourLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "missing",
+        "ChairLegType": "four",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_noBack_fourLegs_noArms/Stool_noBack_fourLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "missing",
+        "ChairLegType": "star",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_noBack_starLegs_wArms/Stool_noBack_starLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "missing",
+        "ChairLegType": "star",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_noBack_starLegs_noArms/Stool_noBack_starLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "existing",
+        "ChairBackType": "missing",
+        "ChairLegType": "unidentified",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_noBack_unidentifiedLegs_wArms/Stool_noBack_unidentifiedLegs_wArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "chair",
+      "attributes": {
+        "ChairArmType": "missing",
+        "ChairBackType": "missing",
+        "ChairLegType": "unidentified",
+        "ChairType": "unidentified"
+      },
+      "match_type": "specific",
+      "path": "models/Chair/Unidentified_noBack_unidentifiedLegs_noArms/Stool_noBack_unidentifiedLegs_noArms.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "authored prim origin; semantic pivot not independently validated",
+      "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    }
+  ],
+  "known_gaps": {
+    "categories_without_models": [
+      "bed",
+      "storage (cabinet)"
+    ],
+    "notes": [
+      "Apple .empty placeholders are represented as missing coverage, not model assets.",
+      "Apple entries that reuse the same source filename for multiple attribute combinations are retained as separate mappings."
+    ]
+  }
+}

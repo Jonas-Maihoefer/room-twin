@@ -4,9 +4,9 @@ This guide covers **only the Python/FastAPI backend and offline USDZ processing*
 
 ## Prerequisites
 
-- Windows 10/11, PowerShell, Git and **64-bit CPython 3.12** recommended (the backend supports Python 3.11+).
+- Windows 10/11, PowerShell, Git and **64-bit CPython 3.12** (the supported backend runtime).
 - Optional: Docker Desktop for running backend API/tests in Linux containers.
-- For future USDZ replacement work: the selected [`usd-core` OpenUSD Python package](https://pypi.org/project/usd-core/) supports Windows wheels, but **is not yet included in `backend/pyproject.toml`**.
+- The backend pins [`usd-core`](https://pypi.org/project/usd-core/) and uses OpenUSD to read the checked-in USDZ and catalog models.
 
 ## First-time setup
 
@@ -59,11 +59,10 @@ backend/testdata/
 
 Develop the processor against those fixtures. The USDZ contains separately referenced wall/floor and furniture geometry; object UUIDs can be matched to `room.json`. Preserve wall/window/door geometry and use safe fallbacks if an asset is missing. Apple's sample model catalog is in `ProvidingCustomModelsForCapturedRoomsAndStructureExports/RoomPlanExporter/RoomPlanCatalog.bundle/`.
 
-For **experimentation only**, `usd-core` can be installed explicitly into your development venv (this is **not** yet a project dependency):
+OpenUSD is installed with the backend dependencies. The pinned `usd-core==26.11` CPython 3.12 wheel is supported on Windows x86-64; the repository CI also runs the USD integration tests on Linux. The local Issue A integration run used Python 3.14 because Python 3.12 was not installed on that workstation, so it is additional compatibility evidence rather than the supported runtime check.
 
 ~~~powershell
-.\.venv\Scripts\python.exe -m pip install usd-core==26.8
-.\.venv\Scripts\python.exe -c "from pxr import Usd; print('OpenUSD Python bindings OK')"
+.\.venv\Scripts\python.exe -c "from pxr import Usd, UsdGeom, Sdf, Gf, UsdUtils; print('OpenUSD Python bindings OK')"
 ~~~
 
 Use OpenUSD's supported stage/reference/packaging APIs rather than altering USDZ ZIP contents blindly. The eventual Python implementation must carefully handle asset paths, pivots, units, transforms and packaging.
@@ -82,11 +81,11 @@ To start the current backend API on port 8000:
 docker compose up --build api
 ~~~
 
-The Docker image currently installs the FastAPI scaffold only; it does **not** implement or install OpenUSD processing. The Docker command is optional — the venv workflow is sufficient for day-to-day Windows development.
+The Docker test stage installs OpenUSD and includes the approved real scan fixture and backend assets. The API image also includes the backend-owned asset catalog; replacement and USDZ output are not implemented yet. Docker is optional for day-to-day Windows development.
 
 ## Troubleshooting and safety
 
-- If `py -3.12` fails, install 64-bit Python 3.12, or use another supported Python 3.11+ interpreter consistently.
+- If `py -3.12` fails, install 64-bit Python 3.12.
 - If the API port is occupied, stop the existing process or choose a different local port.
 - If `usd-core` will not import, verify wheel availability for the Python version and architecture; prefer a 64-bit CPython build supported by PyPI.
 - If the iPhone cannot eventually reach a local backend, use the PC's LAN IP rather than `localhost` from the phone. Only expose a development server on a trusted network; use HTTPS/authentication in real deployments.
