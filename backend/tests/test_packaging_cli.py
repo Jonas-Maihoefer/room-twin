@@ -63,17 +63,17 @@ def test_real_scan_cli_usdz_is_self_contained_and_preserves_architecture(tmp_pat
     report_path = tmp_path / "enhanced.report.json"
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["schema_version"] == "room-twin.replacement-report.v1"
-    assert report["catalog_version"] == 1
-    assert (report["furniture_detected"], report["furniture_replaced"], report["furniture_preserved"]) == (8, 6, 2)
-    assert sum(obj["status"] == "replaced" for obj in report["objects"]) == 6
-    assert sum(obj["status"] != "replaced" for obj in report["objects"]) == 2
+    assert report["catalog_version"] == 2
+    assert (report["furniture_detected"], report["furniture_replaced"], report["furniture_preserved"]) == (8, 8, 0)
+    assert sum(obj["status"] == "replaced" for obj in report["objects"]) == 8
+    assert sum(obj["status"] != "replaced" for obj in report["objects"]) == 0
     assert Counter(obj["category"] for obj in report["objects"]) == {
         "chair": 3, "table": 2, "storage": 2, "bed": 1,
     }
     assert Counter(obj["category"] for obj in report["objects"] if obj["status"] == "replaced") == {
-        "chair": 3, "table": 2, "storage": 1,
+        "chair": 3, "table": 2, "storage": 2, "bed": 1,
     }
-    assert {obj["category"] for obj in report["objects"] if obj["status"] != "replaced"} == {"storage", "bed"}
+    assert {obj["category"] for obj in report["objects"] if obj["status"] != "replaced"} == set()
     assert report["validation"]["status"] == "passed"
     assert report["validation"]["geometry"]["status"] == "passed"
     assert report["validation"]["geometry"]["architecture_preserved"]["status"] == "passed"
