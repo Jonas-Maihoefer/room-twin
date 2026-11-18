@@ -1,72 +1,55 @@
-# How to dev
+# Development quick start
 
-There are two development paths. Use the browser path for day-to-day frontend and backend work; it needs no Apple device or EAS build. Use the native path only to test Apple's actual RoomPlan capture.
+Room Twin has two independent parts: a native Swift scanner and an offline Python/OpenUSD processor. The processor currently receives the RoomPlan export as local CLI files. The Swift app does not upload to FastAPI or download the processed result.
 
-## 1. Windows browser development
+## Native scanner
 
-### Start the app
+On macOS with Xcode and a compatible LiDAR iPhone/iPad:
 
-Requirements: Windows 11, PowerShell, Git, Node.js 22.14+ (22.x), and npm.
+1. Open RoomScanner/RoomScanner.xcodeproj in Xcode.
+2. Select the RoomScanner app target, choose a signing team and compatible device, then build and run.
+3. Grant camera access, perform a RoomPlan scan, and preview or share the local USDZ export.
 
-```powershell
-cd apps/mobile
-npm ci
-Copy-Item .env.example .env
-npm run web
-```
+The scanner exports room.usdz, room.json and metadata.json. It may also record JPEG frames; the replacement CLI does not use them.
 
-The browser build uses the shared React Native interface and web-specific mock scanner. Start a mock scan, then finish or cancel it; **Simulate scan failure** exercises the error path. A successful export appears in the scan inspection card as validated JSON and can be downloaded. The fixture labels itself as synthetic and not Apple RoomPlan data. Browser download behavior uses the browser rather than Expo native filesystem or sharing modules.
+## Python backend
 
-### Start the backend
+Requires 64-bit CPython 3.12. From the repository root:
 
-In a second PowerShell window from the repository root, use Docker Desktop/WSL2:
-
-```powershell
-docker compose up --build
-```
-
-Or use Python directly:
-
-```powershell
+~~~bash
 cd backend
-py -3 -m venv .venv
+python -m venv .venv
+~~~
+
+Install dependencies with the virtual environment's Python. On Windows PowerShell:
+
+~~~powershell
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+~~~
 
-Check `http://127.0.0.1:8000/health` and `http://127.0.0.1:8000/docs`. The API currently validates a provisional envelope only; it does not receive this UI's scan, persist scans, replace furniture, or produce GLB files. From a browser on the same PC, `127.0.0.1` is appropriate. For a phone later, use the PC's LAN IP.
+On Linux:
 
-### Check changes
+~~~bash
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
+~~~
 
-From `apps/mobile`:
+The project pins usd-core==26.11. Run the real scan through the offline CLI:
 
-```powershell
-npm run lint
-npm run typecheck
-npm test -- --ci
-npx expo-doctor
-npx expo install --check
-npx expo config --type prebuild
-npx expo export --platform ios
-npx expo export --platform web
-```
+~~~bash
+python -m app.usd.cli replace \
+  --usdz testdata/room.usdz \
+  --json testdata/room.json \
+  --metadata testdata/metadata.json \
+  --output output/testscan-enhanced.usdz
+~~~
 
-From the backend folder, `.\.venv\Scripts\python.exe -m pytest` runs the backend tests. Alternatively run `docker compose --profile checks run --build --rm tests` from the repository root. Use browser DevTools, Metro logs, and Fast Refresh to debug the frontend. No Apple hardware, Mac, Xcode, Apple account, Expo account, or EAS build is required for this workflow.
+Metadata is optional. The default catalog is assets/catalog.json; pass --catalog path/to/catalog.json for another supported manifest. The default report is output/testscan-enhanced.report.json. Existing output pairs are protected; --force replaces both. The command returns a nonzero exit code and writes a diagnostic to stderr on invalid input or failed packaging/validation.
 
-## 2. Real iOS development
+Run the backend suite from backend/ with python -m pytest. The tests include synthetic geometry cases and the real scan integration path. The output report contains package and geometry diagnostics. For Docker, Windows, validation and model authoring, see the [Windows backend guide](development/windows.md), [verification guide](testing/ios-roomplan-validation.md), and [asset guide](../backend/docs/adding-assets.md).
 
-Native RoomPlan needs an EAS-signed iOS development client because Expo Go does not include `expo-roomplan`. EAS compilation from Windows is remote. Register a real LiDAR-compatible iPhone/iPad first; confirm a free EAS compilation is worth spending before building.
+## API scaffold
 
-The app uses the fixed identifier `com.jonasmaihoefer.roomtwin`; availability is not verified. Confirm that exact explicit App ID under the correct Apple Developer team before building. If unavailable, update `ios.bundleIdentifier` in `apps/mobile/app.config.js` and commit the value so local config and the remote EAS build resolve identically. There is no `IOS_BUNDLE_IDENTIFIER` PowerShell override.
+The API exposes GET /health and a JSON-only POST /scans stub. That stub is not a file upload, persistence layer, replacement processor or result download service. Swift-to-FastAPI integration remains planned.
 
-Then authenticate, register the physical device, and initiate the development build from `apps/mobile`:
-
-```powershell
-npx eas-cli@latest login
-npx eas-cli@latest device:create
-npx eas-cli@latest build --platform ios --profile development
-```
-
-Follow the prompts to link the Expo project, select the Apple Developer team, and create or select signing credentials. Install the build from its EAS URL on the registered iPhone/iPad. Never commit certificates, private keys, provisioning profiles, or EAS tokens.
-
-For daily native JS work, start Metro from Windows using `npm run start:dev-client -- --lan`. Keep the iPhone/iPad and PC on the same trusted Wi-Fi, allow Expo traffic through Windows Firewall, and open the project in the installed Room Twin development client. Use the PC's LAN IP rather than `localhost` for the API from the phone. JavaScript, TypeScript, and style changes use Fast Refresh. Native dependency, Expo plugin/config, iOS permission, deployment-target, or bundle-identifier changes need another EAS development build. See the [full Windows guide](development/windows.md) for signing, troubleshooting, compatibility notes, and the first-build preflight checklist.
+Only use scan fixtures approved for repository use. Do not commit private room layouts or camera frames.

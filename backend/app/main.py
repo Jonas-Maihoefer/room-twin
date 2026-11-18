@@ -19,5 +19,5 @@ def accept_scan_stub(payload: RoomPlanSourceV1) -> ScanAcceptedV1:
         scan_id=uuid4(),
         schema_version=payload.schema_version,
         status="accepted-stub",
-        message="Validated only; persistence and scan-to-GLB processing are not implemented.",
+        message="Validated only; persistence and scan processing are not implemented.",
     )

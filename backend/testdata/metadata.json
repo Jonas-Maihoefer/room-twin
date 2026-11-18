@@ -1,0 +1,13 @@
+{
+  "einheit" : "Meter",
+  "iosVersion" : "27.0.1",
+  "dateien" : [
+    "room.usdz",
+    "room.json",
+    "metadata.json"
+  ],
+  "geraet" : "iPhone",
+  "koordinatensystem" : "ARKit, y-Achse nach oben",
+  "scanID" : "scan_2026-11-11_22-43-51",
+  "datum" : "2026-11-11_22-43-51"
+}

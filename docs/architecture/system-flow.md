@@ -1,25 +1,45 @@
-# System flow
+# System flow — implemented and planned
 
-The [system architecture](architecture.md) defines the intended MVP path:
+[Architecture](architecture.md) | [Technology stack](tech-stack.md)
 
-1. The Room Twin iOS app starts an Apple RoomPlan capture.
-2. RoomPlan provides structured source data.
-3. A versioned API adapter maps the source data to the backend contract.
-4. The app uploads the payload directly to the backend.
-5. The backend validates geometry and coordinates, then selects, scales, and places replacement furniture.
-6. The backend generates a GLB scene.
-7. The app downloads or shares the result.
+## Implemented local scan-to-USDZ workflow
 
-## Current implementation
+~~~mermaid
+flowchart LR
+    A["Swift/SwiftUI iOS scanner<br/>RoomPlan + ARKit"] --> B["room.usdz + room.json<br/>+ metadata.json"]
+    B --> C["Local Python CLI<br/>OpenUSD / usd-core"]
+    M["Backend-owned catalog<br/>catalog.json + .usdc models"] --> C
+    C --> D["Standalone enhanced USDZ<br/>+ replacement report"]
+    D --> E["Compatible USDZ viewer"]
+~~~
 
-The mobile foundation currently covers RoomPlan capture and local source JSON export, inspection, and sharing. It does not yet map the source into the API contract or upload it.
+1. The native Swift scanner captures a room with RoomPlan and exports USDZ and JSON scan data plus metadata.
+2. A developer supplies those files to the Python CLI as local inputs; the iOS app does not call the backend.
+3. The backend parses the JSON, inspects the USD scene, matches furniture by UUID, and selects a backend-owned model using category and attribute rules.
+4. OpenUSD replaces supported furniture while preserving unmatched placeholders and room architecture.
+5. OpenUSD packages a standalone enhanced USDZ. A JSON report records per-object decisions and package/geometry diagnostics.
+6. The enhanced USDZ can be opened independently in a compatible viewer. The processor does not render or prove visual quality.
 
-The backend currently exposes a health endpoint and validates a provisional versioned source envelope, returning a stub response. It does not persist or transform scan content. Furniture replacement and GLB generation are not implemented. Native RoomPlan export remains to be checked with an EAS development build on a physical compatible device. See the [Windows guide](../development/windows.md) for build and device steps.
+The real fixture initially contains eight furniture objects: three chairs, two tables and one shelf are replaced; one cabinet and one bed are preserved because the catalog has no matching model. This is intentional fallback behavior.
 
-## Responsibilities
+## Planned iOS/API transport
 
-- **iOS app:** native capture, source data handling, eventual API call, progress and error display, and result delivery.
-- **Backend:** input validation, geometry and transform handling, asset selection, and GLB generation.
-- **Asset library:** replacement models; a local library is sufficient for the initial pipeline.
+~~~mermaid
+flowchart LR
+    IOS["Swift app"] -. "planned upload" .-> API["FastAPI transport"]
+    API -. "planned local processing orchestration" .-> CLI["Python/OpenUSD processor"]
+    CLI -. "planned result download" .-> IOS
+~~~
 
-A 3D viewer or editor may follow the MVP. It is outside the first MVP scope.
+Swift-to-FastAPI upload and enhanced USDZ download are not implemented. The existing POST /scans accepts only a JSON validation envelope and responds accepted-stub; it does not accept USDZ files, persist scans or invoke processing. Authentication, storage, jobs and a transport contract remain future work.
+
+## Status
+
+- [x] Native RoomPlan app exports real USDZ, JSON and metadata.
+- [x] Offline Python/OpenUSD replacement CLI and independent backend asset catalog.
+- [x] Standalone USDZ packaging and automated package/geometry validation.
+- [x] Real scan fixture and backend integration tests.
+- [ ] Swift upload and processed USDZ download through FastAPI.
+- [ ] Manual rendered viewer verification on the generated result.
+
+See the [verification guide](../testing/ios-roomplan-validation.md). No GLB output step is part of the selected architecture.

@@ -1,22 +1,23 @@
-# Documentation
+# Room Twin documentation
 
-**Architecture status: chosen.** Room Twin uses a custom iOS app with Apple RoomPlan and direct backend integration. Open implementation details do not change that architecture decision.
+The current implementation is a native Swift/SwiftUI RoomPlan + ARKit scanner and an offline Python/OpenUSD furniture replacement processor. RoomPlan scan files are currently supplied to the processor as local CLI inputs. Swift-to-FastAPI upload/download is planned and is not implemented.
 
 ## Architecture
 
-1. [System architecture](architecture/architecture.md) — components, responsibilities, MVP scope, and integration boundaries.
-2. [System flow](architecture/system-flow.md) — the intended path from room scan to model delivery, with the current implementation boundary.
-3. [Technology stack](architecture/tech-stack.md) — chosen requirements, implementation technologies, and validation status.
+- [Architecture](architecture/architecture.md) — components, ownership, data and API boundaries.
+- [System flow](architecture/system-flow.md) — implemented offline path and planned transport.
+- [Technology stack](architecture/tech-stack.md) — versions, formats and status.
 
 ## Development
 
-- [How to dev](how-to-dev.md) — setup and daily development routine.
-- [Windows development](development/windows.md) — EAS signing, device registration, networking, and troubleshooting.
+- [Development quick start](how-to-dev.md) — iOS and backend setup.
+- [Windows backend guide](development/windows.md) — Windows setup, CLI, tests and Docker.
+- [Adding backend assets](../backend/docs/adding-assets.md) — catalog schema, model constraints, validation and licensing.
+- [Backend USD processor](../backend/app/usd/README.md) — processing and packaging details.
 
 ## Verification
 
-- [iOS RoomPlan and end-to-end validation](testing/ios-roomplan-validation.md) — plan for proving the real scan-to-model pipeline on a supported device.
+- [RoomPlan and USDZ validation](testing/ios-roomplan-validation.md) — automated checks and manual viewer limits.
+- [Furniture placement diagnostic](../backend/docs/furniture-placement-diagnostic.md) — geometry measurements and placement regression context.
 
-## Current implementation
-
-The repository contains an Expo app foundation and a FastAPI scaffold. The app can exercise the native capture/export path, but physical-device validation remains pending. The backend ingestion route is a provisional stub; the complete upload, furniture replacement, and GLB pipeline are not implemented.
+The native app is in [RoomScanner](../RoomScanner/). The Python backend and its independent catalog are in [backend](../backend/). The obsolete Apple sample project is not part of this repository.
