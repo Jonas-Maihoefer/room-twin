@@ -16,6 +16,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     @Published var usdzURL: URL?
     @Published var ergebnis: CapturedRoom?
     @Published var exportDateien: [URL] = []
+    var meshAnker: [ARMeshAnchor] = []
     
     weak var arSession: ARSession?
     weak var rcv: RoomCaptureView?
@@ -48,11 +49,14 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
     }
     
     func stopScan() {
+        // Mesh einsammeln, BEVOR die Session stoppt (danach rechnet ARKit nicht mehr weiter)
+        meshAnker = arSession?.currentFrame?.anchors.compactMap { $0 as? ARMeshAnchor } ?? []
         rcv?.captureSession.stop()
         stopSammeln()
     }
     
     func neuerScanOrdner() {
+        meshAnker = []
         frameInfos = []
         let formatierer = DateFormatter()
         formatierer.dateFormat = "yyyy-MM-dd_HH-mm-ss"
@@ -60,6 +64,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
         let dokumente = URL.documentsDirectory
         let ordner = dokumente.appending(path: "scan_\(zeit)")
         let frames = ordner.appending(path: "frames")
+        
         
         do {
             try FileManager.default.createDirectory(at: frames, withIntermediateDirectories: true)
@@ -76,6 +81,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
         neuerScanOrdner()
         sammelTask = Task {
             while !Task.isCancelled {
+                meshEinschalten()
                 speichereFrame()
                 try? await Task.sleep(for: .seconds(0.5))
             }
@@ -95,6 +101,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
         scanOrdner = nil                                    // vergessen, dass es ihn gab
         frameNummer = 0
         frameInfos = []
+        meshAnker = []
     }
     
     func speichereFrame() {
@@ -149,6 +156,77 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
             print("Fehler beim Speichern: \(error)")
         }
     }
+    
+    func meshEinschalten() {
+        
+        guard let sesh = arSession,
+        let konfig = sesh.configuration as? ARWorldTrackingConfiguration
+        else {
+            return
+        }
+        if konfig.sceneReconstruction == .meshWithClassification {
+            return
+        }
+        let support = ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification)
+            if !support {
+                print("kein Support")
+                return
+            }
+        konfig.sceneReconstruction = .meshWithClassification
+        sesh.run(konfig)
+        print("Mesh an")
+        
+            
+    }
+    // Name der ARKit-Klasse als Text, für die Gruppen in der OBJ-Datei
+    func klassenName(_ k: ARMeshClassification) -> String {
+        switch k {
+        case .wall:    return "wall"
+        case .floor:   return "floor"
+        case .ceiling: return "ceiling"
+        case .table:   return "table"
+        case .seat:    return "seat"
+        case .window:  return "window"
+        case .door:    return "door"
+        default:       return "none"
+        }
+    }
+
+    // Schreibt alle Mesh-Stücke als eine OBJ-Datei (Weltkoordinaten, Gruppen = Klassen)
+    func schreibeMesh(nach datei: URL) throws {
+        var text = "# RoomScanner-Mesh (ARKit), Meter, ARKit-Welt (y nach oben), Gruppen = Klassen\n"
+        var versatz = 0             // so viele Eckpunkte stehen schon in der Datei
+        var letzteKlasse = ""
+
+        for anker in meshAnker {
+            let geo = anker.geometry
+
+            // Eckpunkte: vom Mesh-Stück in Weltkoordinaten umrechnen
+            for i in 0..<geo.vertices.count {
+                let p = geo.eckpunkt(i)
+                let w = anker.transform * SIMD4<Float>(p.x, p.y, p.z, 1)
+                text += "v \(w.x) \(w.y) \(w.z)\n"
+            }
+
+            // Dreiecke: Nummern ab 1 und über die ganze Datei weitergezählt
+            for i in 0..<geo.faces.count {
+                let name = klassenName(geo.klasse(i))
+                if name != letzteKlasse {           // neue Gruppe nur, wenn die Klasse wechselt
+                    text += "g \(name)\n"
+                    letzteKlasse = name
+                }
+                let d = geo.dreieck(i)
+                text += "f \(d[0] + versatz + 1) \(d[1] + versatz + 1) \(d[2] + versatz + 1)\n"
+            }
+
+            versatz += geo.vertices.count
+        }
+
+        try text.write(to: datei, atomically: true, encoding: .utf8)
+    }
+    
+    
+    
     
     // Macht aus einem Tiefen- oder Konfidenzbild (CVPixelBuffer) rohe Bytes zum Speichern.
     func rohdaten(von map: CVPixelBuffer, bytesProPixel: Int) -> Data {
@@ -230,7 +308,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
                 iosVersion: UIDevice.current.systemVersion,
                 einheit: "Meter",
                 koordinatensystem: "ARKit, y-Achse nach oben",
-                dateien: ["room.usdz", "room.json", "metadata.json","frames.json","frames/", "README.md"]
+                dateien: ["room.usdz", "room.json", "metadata.json","frames.json","frames/", "README.md", "mesh.obj"]
             )
             let metaDaten = try encoder.encode(meta)
             try metaDaten.write(to: metaDatei)
@@ -250,6 +328,7 @@ class ScanManager: NSObject, ObservableObject, RoomCaptureViewDelegate {
             
             let framemeta = try encoder.encode(alleFrames)
             try framemeta.write(to: framesDatei)
+            try schreibeMesh(nach: scanOrdner.appending(path: "mesh.obj"))
             
             
             if let readme = Bundle.main.url(forResource: "README", withExtension: "md") {
@@ -299,4 +378,31 @@ struct FrameInfo: Codable {
 struct FramesDatei: Codable {
     let hinweise: [String]
     let frames: [FrameInfo]
+}
+
+
+// Hilfsfunktionen, um die Rohdaten eines Mesh-Stücks auszulesen
+extension ARMeshGeometry {
+    // Eckpunkt Nummer i, in Koordinaten des Mesh-Stücks
+    func eckpunkt(_ i: Int) -> SIMD3<Float> {
+        let zeiger = vertices.buffer.contents().advanced(by: vertices.offset + vertices.stride * i)
+        let p = zeiger.assumingMemoryBound(to: (Float, Float, Float).self).pointee
+        return SIMD3<Float>(p.0, p.1, p.2)
+    }
+
+    // Dreieck Nummer i: die drei Eckpunkt-Nummern (ab 0, innerhalb dieses Stücks)
+    func dreieck(_ i: Int) -> [Int] {
+        let anfang = faces.buffer.contents().advanced(by: faces.indexCountPerPrimitive * faces.bytesPerIndex * i)
+        return (0..<faces.indexCountPerPrimitive).map { n in
+            Int(anfang.advanced(by: n * faces.bytesPerIndex).assumingMemoryBound(to: UInt32.self).pointee)
+        }
+    }
+
+    // Klasse von Dreieck Nummer i (Wand, Boden, Tisch …)
+    func klasse(_ i: Int) -> ARMeshClassification {
+        guard let c = classification else { return .none }
+        let zeiger = c.buffer.contents().advanced(by: c.offset + c.stride * i)
+        let wert = Int(zeiger.assumingMemoryBound(to: UInt8.self).pointee)
+        return ARMeshClassification(rawValue: wert) ?? .none
+    }
 }
