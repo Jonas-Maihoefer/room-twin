@@ -107,13 +107,13 @@ def test_real_scan_replacements_are_visible_and_preserve_world_placement(tmp_pat
     standalone_catalog = AssetCatalog.load(standalone_assets / "catalog.json")
     result = process_roomplan(source, BACKEND / "testdata/room.json", standalone_catalog,
                               tmp_path / "editable", metadata_path=BACKEND / "testdata/metadata.json")
-    assert len([p for p in result.plan if p.model]) == 6
-    assert len([p for p in result.plan if not p.model]) == 2
+    assert len([p for p in result.plan if p.model]) == 8
+    assert len([p for p in result.plan if not p.model]) == 0
     assert len({p.match.uuid for p in result.plan}) == 8
     assert hashlib.sha256(source.read_bytes()).hexdigest() == before
     stage = Usd.Stage.Open(str(result.root_layer))
     assert stage is not None
-    assert len(result.dependencies) == 3
+    assert len(result.dependencies) == 5
     assert mesh_map(stage, "/room/Mesh_grp/Arch_grp") == arch_before
     assert world_xform_map(stage, "/room/Mesh_grp/Arch_grp") == arch_xforms_before
     assert {p.match.uuid for p in result.plan if p.status == "replaced"} == {p.match.uuid for p in result.plan if p.model}
@@ -169,7 +169,7 @@ def test_real_scan_replacements_are_visible_and_preserve_world_placement(tmp_pat
 
     # Replacements retain distinct composed poses, so replacing one chair does
     # not move another. Architecture keeps the same mesh topology and points.
-    assert len({tuple(round(float(c), 5) for c in center) for center in replaced_centers.values()}) == 6
+    assert len({tuple(round(float(c), 5) for c in center) for center in replaced_centers.values()}) == 8
     assert len([p for p in stage.Traverse() if p.GetPath().HasPrefix("/room/Mesh_grp/Arch_grp")]) > 0
     used_layers = {Path(layer.identifier).resolve() for layer in stage.GetUsedLayers() if not layer.anonymous}
     assert set(result.dependencies).issubset(used_layers)

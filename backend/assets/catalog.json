@@ -1,6 +1,6 @@
 {
   "schema_version": "room-twin.asset-catalog.v1",
-  "catalog_version": 1,
+  "catalog_version": 2,
   "provenance": "Copied from Apple's public RoomPlan custom-models sample; mapping follows its generated catalog.plist.",
   "models": [
     {
@@ -577,13 +577,152 @@
       "up_axis": "Y",
       "pivot": "authored prim origin; semantic pivot not independently validated",
       "scaling_policy": "defer until model bounds and authored units are inspected; no implicit scaling"
+    },
+    {
+      "category": "bed",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Bed/Default/DefaultBed.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.96 x 0.63 x 1.90 m",
+      "scaling_policy": "authored at realistic single-bed size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "television",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Television/Default/DefaultTelevision.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.90 x 0.59 x 0.59 m; front direction not verified",
+      "scaling_policy": "authored at 0.9 m width; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "bathtub",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Bathtub/Default/DefaultBathtub.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 1.70 x 0.60 x 0.80 m",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "dishwasher",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Dishwasher/Default/DefaultDishwasher.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.72 x 0.80 x 0.66 m",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "fireplace",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Fireplace/Default/DefaultFireplace.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 1.60 x 1.26 x 0.43 m; width on X, front facing +Z",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "oven",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Oven/Default/DefaultOven.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.66 x 0.90 x 0.61 m",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "refrigerator",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Refrigerator/Default/DefaultRefrigerator.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.84 x 1.80 x 0.83 m",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "sink",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Sink/Default/DefaultSink.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.82 x 0.85 x 0.48 m",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "stairs",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Stairs/Default/DefaultStairs.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 3.50 x 2.57 x 1.52 m; run along X, width on Z; orientation vs RoomPlan stairs not verified",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "stove",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Stove/Default/DefaultStove.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.60 x 0.90 x 0.74 m",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "toilet",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Toilet/Default/DefaultToilet.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.46 x 0.66 x 0.70 m; front facing +Z",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "washerDryer",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/WasherDryer/Default/DefaultWasherDryer.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.71 x 0.85 x 0.69 m",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "storage",
+      "attributes": {
+        "StorageType": "cabinet"
+      },
+      "match_type": "specific",
+      "path": "models/Storage/Cabinet/Cabinet.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 0.55 x 1.30 x 0.64 m; front (drawers) facing +Z",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
+    },
+    {
+      "category": "storage",
+      "attributes": {},
+      "match_type": "category_default",
+      "path": "models/Storage/Default/DefaultStorage.rooms.usdc",
+      "units": "metres",
+      "up_axis": "Y",
+      "pivot": "centre of footprint at floor level (y=0); bounds verified 1.39 x 1.90 x 0.54 m; open shelf unit, symmetric front/back",
+      "scaling_policy": "authored at realistic size; fitted per axis to detected dimensions by the replacement engine"
     }
   ],
   "known_gaps": {
-    "categories_without_models": [
-      "bed",
-      "storage (cabinet)"
-    ],
+    "categories_without_models": [],
     "notes": [
       "Apple .empty placeholders are represented as missing coverage, not model assets.",
       "Apple entries that reuse the same source filename for multiple attribute combinations are retained as separate mappings."
