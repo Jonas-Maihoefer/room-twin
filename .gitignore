@@ -27,5 +27,19 @@ credentials.json
 
 # Private captures and generated model output
 scan-captures/
+
+ios/
+android/
+build/
+
+# Xcode
+.DS_Store
+xcuserdata/
+DerivedData/
+*.xcuserstate
+build/
+
 processed-scans/
 frames/
+
+
