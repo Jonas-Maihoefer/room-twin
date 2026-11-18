@@ -10,6 +10,7 @@ scan_YYYY-MM-DD_HH-mm-ss/
 ├── metadata.json        Infos zum Scan
 ├── room.json            RoomPlan-Ergebnis (semantisch)
 ├── room.usdz            RoomPlan-Ergebnis (3D-Modell)
+├── mesh.obj             ARKit-Mesh des Raums, mit Klassen
 ├── frames.json          Kamera-Parameter und Pose pro Frame
 └── frames/
     ├── frame_0001.jpg           Kamerabild
@@ -65,6 +66,15 @@ Das genaue Schema legt Apple fest und kann sich mit neuen iOS-Versionen leicht �
 
 Vereinfachtes 3D-Modell von RoomPlan: Wände als Flächen, Möbel als Boxen. Lässt sich am Mac per Quick Look anschauen und in Blender oder Unity (mit USD-Importer) öffnen.
 
+### `mesh.obj`
+
+Dreiecksnetz des ganzen Raums, das ARKit während des Scans live aus **allen** LiDAR-Messungen baut (nicht nur aus den gespeicherten Frames). Feiner als `room.usdz`, gröber als eine Punktwolke aus den Frames, **ohne Farben**.
+
+- Standard-OBJ als Text: `v x y z` = Eckpunkt, `f a b c` = Dreieck (Nummern ab 1, über die ganze Datei)
+- Eckpunkte in **Weltkoordinaten**, Meter, also im selben System wie `room.json` und die Frames
+- Die Dreiecke sind nach ARKit-Klasse gruppiert (`g …`): `wall`, `floor`, `ceiling`, `table`, `seat`, `window`, `door`, `none` (nicht zugeordnet). Dieselbe Klasse kann mehrmals als Gruppe auftauchen
+- Öffnen mit Blender, MeshLab, CloudCompare oder per Quick Look am Mac; in Python z. B. mit `trimesh`
+
 ### `frames.json`
 
 ```json
@@ -117,7 +127,7 @@ Konfidenz zu jedem Tiefenpixel:
 
 ## Koordinatensysteme
 
-- **Welt (ARKit):** Meter, rechtshändig, **y zeigt nach oben** (Schwerkraft). Der Ursprung ist die Position des iPhones beim Start des Scans. `room.json` und alle Frames liegen im **selben** Weltkoordinatensystem.
+- **Welt (ARKit):** Meter, rechtshändig, **y zeigt nach oben** (Schwerkraft). Der Ursprung ist die Position des iPhones beim Start des Scans. `room.json`, `mesh.obj` und alle Frames liegen im **selben** Weltkoordinatensystem.
 - **Kamera (ARKit):** x nach rechts, y nach oben, z nach hinten. Die Kamera **schaut in −z**. Bezieht sich auf das Sensor-Querformat.
 - **Bildpixel:** `u` nach rechts, `v` nach unten, Ursprung oben links.
 - **Matrizen** werden **spaltenweise** gespeichert (wie in Swift/simd). In NumPy: `np.array(liste).reshape(n, n).T`
