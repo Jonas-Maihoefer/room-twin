@@ -1,13 +1,17 @@
 {
+  "scanID" : "scan_2026-11-18_13-00-43",
+  "datum" : "2026-11-18_13-00-43",
+  "koordinatensystem" : "ARKit, y-Achse nach oben",
   "einheit" : "Meter",
-  "iosVersion" : "27.0.1",
+  "geraet" : "iPhone",
+  "iosVersion" : "27.2.1",
   "dateien" : [
     "room.usdz",
     "room.json",
-    "metadata.json"
-  ],
-  "geraet" : "iPhone",
-  "koordinatensystem" : "ARKit, y-Achse nach oben",
-  "scanID" : "scan_2026-11-11_22-43-51",
-  "datum" : "2026-11-11_22-43-51"
+    "metadata.json",
+    "frames.json",
+    "frames\/",
+    "README.md",
+    "mesh.obj"
+  ]
 }

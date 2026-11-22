@@ -58,22 +58,12 @@ conversion remain appropriate follow-up validation as the catalog grows.
 
 ## Build a standalone USDZ
 
-Install the backend and developer dependencies from `backend/`:
-
-```bash
-python -m pip install -e ".[dev]"
-```
-
 The offline CLI reads a RoomPlan USDZ and its paired JSON export, applies the
 backend-owned asset catalog, validates the result, and writes a self-contained
 USDZ and a versioned JSON report:
 
 ```bash
-python -m app.usd.cli replace \
-  --usdz testdata/room.usdz \
-  --json testdata/room.json \
-  --metadata testdata/metadata.json \
-  --output output/testscan-enhanced.usdz
+python -m app.usd.cli replace --usdz testdata/room.usdz --json testdata/room.json --metadata testdata/metadata.json --output output/testscan-enhanced.usdz
 ```
 
 `--metadata` is optional. By default, the catalog is
@@ -110,9 +100,8 @@ python -m pytest
 
 The test suite includes the committed RoomPlan scan, architecture geometry and
 transform comparisons, report checks, package dependency checks, and a fresh
-process reopening the USDZ after the CLI workspace has been removed. The suite
-uses OpenUSD Python APIs and does not invoke a renderer or the `usdchecker`
-executable. Apple Quick Look validation is not performed by the automated
-backend suite. OpenUSD structural validity does not establish visual appearance
-or Quick Look compatibility. See the [asset extension guide](../../docs/adding-assets.md)
-for catalog schema and model validation details.
+process reopening the USDZ after the CLI workspace has been removed. The
+`usdchecker` executable is not available in the current development environment;
+the checks use the installed OpenUSD Python APIs. Apple Quick Look validation is
+not performed by the automated backend suite. OpenUSD structural validity does
+not establish visual appearance or Quick Look compatibility.
