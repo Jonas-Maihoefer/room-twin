@@ -4,7 +4,7 @@
 
 **Ergebnis vorab:** Der Testdatensatz in `backend/testdata/` ist **nicht direkt kompatibel** mit LiteReality-Agent. Die Informationen sind größtenteils vorhanden, liegen aber in anderer Struktur, anderem Format und anderen Pfaden vor. Eine Umwandlung ist nötig.
 
-Die Analyse basiert nur auf dem Quellcode. Ein Lauf mit echten Daten steht noch aus.
+Die Analyse beruht auf dem Quellcode von Upstream. Die umgewandelten Daten wurden mit Upstreams Lader und Projektionsfunktion geprüft (siehe unten). Ein Lauf der vollständigen Upstream-Pipeline (GPU, LLM) steht noch aus.
 
 ## Was Upstream erwartet
 
@@ -49,8 +49,8 @@ Die Pfade in `frames.json` lauten `frames/frame_NNNN.jpg`, im Repo liegen die Da
 | Frame-Metadaten | eine JSON-Datei **pro Frame** | `frame_NNNN.json` für alle 106 Frames erzeugt | ✅ umgesetzt (`cli.py`) |
 | Pose-Schlüssel | `cameraPoseARFrame` | aus `kameraZuWelt` umbenannt | ✅ umgesetzt |
 | Projektionsmatrix | `projectionMatrix` (4×4), Pflicht im Lader | aus den Intrinsics berechnet, Near 0,01 / Far 100 (Annahme) | ⚠️ Lader akzeptiert, Werte nicht geprüft |
-| Intrinsics | `intrinsics`, reshape auf 3×3 | `intrinsics`, 9 Zahlen | ⚠️ Reihenfolge (spalten- oder zeilenweise) zu prüfen |
-| Pose-Konvention | ARKit, wird in Upstream in Y/Z gespiegelt | ARKit, spaltenweise | ⚠️ nicht verifiziert |
+| Intrinsics | `intrinsics`, reshape auf 3×3 | `intrinsics`, 9 Zahlen, spaltenweise | ✅ transponiert umgesetzt, Projektion stimmt (0,003 Pixel) |
+| Pose-Konvention | ARKit, wird in Upstream in Y/Z gespiegelt | ARKit, spaltenweise | ⚠️ nur visuell geprüft (ein Stuhl, zwei Frames) |
 | RGB-Bilder | im selben Ordner wie die JSON | `frame_NNNN.jpg` im Ausgabeordner kopiert | ✅ umgesetzt |
 | Tiefe | `depth_NNNN.png`, mm | aus `.bin` (Meter) als uint16-PNG in mm | ✅ umgesetzt |
 | Konfidenz | `conf_NNNN.png`, Pflicht | aus `.bin` (uint8) als PNG | ✅ umgesetzt |
@@ -67,7 +67,7 @@ Umgesetzt in `experiments/litereality-agent-poc/cli.py` (Ausgabe außerhalb von 
 3. ✅ Konfidenzbilder als PNG.
 4. ✅ Bilder im selben Ordner wie die Frame-Dateien.
 5. ✅ Upstreams Lader lädt alle 106 Frames.
-6. ⚠️ Pose- und Intrinsics-Konvention nicht verifiziert.
+6. ⚠️ Pose-Konvention nur visuell geprüft (ein Stuhl in zwei Frames).
 
 ## Optionen
 
@@ -118,7 +118,7 @@ Die zweite Zeile hatte beim ersten Versuch das falsche Vorzeichen (y gespiegelt)
 
 ### Was nicht umgewandelt wird
 
-- **`room.usdz`**: Wird unverändert in den Ausgabeordner kopiert (nur, wenn sie dort fehlt oder eine andere Größe hat). Upstream braucht sie für die Geometrie des Raums.
+- **`room.usdz`**: Wird bei jedem Lauf unverändert in den Ausgabeordner kopiert. Upstream braucht sie für die Geometrie des Raums.
 - **`mesh.obj`, `room.json`, `metadata.json`**: werden nicht verwendet.
 - **Zeitstempel (`zeitstempel`)**: wird nicht übernommen.
 
@@ -127,16 +127,13 @@ Die zweite Zeile hatte beim ersten Versuch das falsche Vorzeichen (y gespiegelt)
 1. **Rechnerischer Vergleich** der Projektion (Intrinsics gegen Projektionsmatrix, gleicher Punkt): Ergebnis stimmt überein.
 2. **Upstreams Lader** (`load_scan_frames_no_video`) lädt alle 106 Frames ohne Fehler.
 3. **Upstreams Projektion** (`project_point`) gegen unsere Formel über alle 8 Objekte aus `room.json` und alle 106 Frames: 540 Vergleiche vor der Kamera, maximale Abweichung 0,003 Pixel.
-4. **Bildtest** mit einem Stuhl in Frame 32 und Frame 95: Der projizierte Mittelpunkt liegt auf dem Stuhl.
+4. **Frischer Lauf mit der kommentarlosen `cli.py`** (106 Fotos, 425 Dateien): Upstreams Lader lädt 106 von 106 Frames, Tiefe `uint16` 192 × 256 (max. 5,56 m), Konfidenz `uint8` mit Werten 0, 1, 2, `room.usdz` vorhanden.
+5. **Bildtest** mit einem Stuhl in Frame 32 und Frame 95: Der projizierte Mittelpunkt liegt auf dem Stuhl.
 
 **Einschränkung:** Die Bildtests sind visuell und nur für einen Stuhl in zwei Frames. Das stützt die Konvention, ist aber kein vollständiger Beweis.
 
 ## Offene Punkte
 
-- Ob die Intrinsics-Reihenfolge stimmt (Spalten- oder Zeilenweise). Das Skript geht von spaltenweise aus, das ist nicht verifiziert.
 - Near (0,01) und Far (100) in der `projectionMatrix` sind Annahmen. Sie sind nicht in den Daten enthalten.
-- Konsistenztest: Ein Punkt, der über die Intrinsics projiziert wird, sollte im Bild dieselbe Stelle treffen wie über die Projektionsmatrix.
-- Ob die Pose-Konvention aus Option A korrekte Geometrie liefert. Das zeigt erst ein Lauf.
-- Ob alle 106 Frames eine gültige Pose haben.
+- Ob die Pose-Konvention auch bei anderen Objekten und Räumen stimmt (bisher nur ein Stuhl). Ein vollständiger Pipeline-Lauf zeigt es.
 - Ob der öffentliche Beispielscan aus `LiteReality/example-scans` besser passt. Das muss der Pflichtlauf zeigen.
-    
