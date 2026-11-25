@@ -12,7 +12,7 @@
       "type": "container/run",
       "id": "trellis2-rtx5080-smoke",
       "args": {
-        "image": "${TRELLIS_NOSANA_IMAGE}",
+        "image": "docker.io/jonasmaihoefer2/trellis2-on-rtx-5080",
         "gpu": true,
         "expose": 8000
       }
