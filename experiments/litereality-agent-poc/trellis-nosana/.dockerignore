@@ -1,0 +1,9 @@
+**/.git
+**/__pycache__
+**/*.py[cod]
+**/weights
+**/checkpoints
+**/output
+**/outputs
+**/sample.glb
+**/report.json

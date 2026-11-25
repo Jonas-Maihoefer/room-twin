@@ -1,0 +1,21 @@
+{
+  "version": "0.1",
+  "type": "container",
+  "meta": {
+    "trigger": "cli",
+    "system_requirements": {
+      "required_vram": 16
+    }
+  },
+  "ops": [
+    {
+      "type": "container/run",
+      "id": "trellis2-rtx5080-smoke",
+      "args": {
+        "image": "${TRELLIS_NOSANA_IMAGE}",
+        "gpu": true,
+        "expose": 8000
+      }
+    }
+  ]
+}
