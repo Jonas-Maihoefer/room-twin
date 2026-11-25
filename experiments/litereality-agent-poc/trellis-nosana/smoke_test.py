@@ -31,6 +31,7 @@ def ensure_dinov3() -> Path:
         repo_id=DINOV3_REPO,
         revision=DINOV3_REVISION,
         local_dir=str(dino_dir),
+        token=False,
     )
     weights = dino_dir / "model.safetensors"
     if not weights.is_file():
@@ -121,8 +122,8 @@ def run() -> tuple[Path, Path]:
         raise RuntimeError("CUDA is unavailable; run this container with NVIDIA GPU access")
     device = torch.cuda.current_device()
     gpu_name = torch.cuda.get_device_name(device)
-    if "5080" not in gpu_name:
-        print(f"[smoke] Note: detected {gpu_name}; requested feasibility target is RTX 5080")
+    gpu_properties = torch.cuda.get_device_properties(device)
+    gpu_capability = list(torch.cuda.get_device_capability(device))
 
     output_dir = Path(os.environ.get("OUTPUT_DIR", "/public"))
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -133,28 +134,62 @@ def run() -> tuple[Path, Path]:
         "upstream_commit": LITEREALITY_COMMIT,
         "model": MODEL_ID,
         "pipeline_type": "512",
-        "low_vram_mode": True,
+        "low_vram_mode": None,
         "texture_size": 1024,
         "inference_processes": 1,
-        "gpu_model": gpu_name,
+        "gpu_target": {"model": "NVIDIA GeForce RTX 5080", "vram_gib": 16},
+        "gpu_detected": {
+            "model": gpu_name,
+            "compute_capability": gpu_capability,
+            "total_memory_bytes": int(gpu_properties.total_memory),
+        },
+        "gpu_target_verified": False,
         "cuda_version": torch.version.cuda,
         "pytorch_version": torch.__version__,
+        "native_dependency_versions": {
+            "trellis2_commit": os.environ.get("TRELLIS2_COMMIT"),
+            "nvdiffrast_commit": os.environ.get("NVDIFFRAST_COMMIT"),
+            "cumesh_commit": os.environ.get("CUMESH_COMMIT"),
+            "flexgemm_commit": os.environ.get("FLEXGEMM_COMMIT"),
+            "transformers": __import__("transformers").__version__,
+        },
     }
     torch.cuda.reset_peak_memory_stats(device)
     started = time.perf_counter()
     try:
+        target_gpu = (
+            gpu_name.strip().casefold() == "nvidia geforce rtx 5080"
+            and gpu_capability == [12, 0]
+        )
+        if not target_gpu:
+            raise RuntimeError(
+                "Wrong GPU for RTX 5080 verification: detected "
+                f"{gpu_name} with compute capability {gpu_capability}"
+            )
+        os.environ.setdefault("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1")
         dino_dir = ensure_dinov3()
-        trellis_dir = Path(os.environ.get("TRELLIS2_DIR", "/opt/litereality-agent/backends/TRELLIS.2"))
+        trellis_dir = Path(os.environ.get("LR_REPO_ROOT", "/opt/litereality-agent")) / "TRELLIS.2"
         image_path = Path(os.environ.get("SMOKE_IMAGE", trellis_dir / "assets/example_image/T.png"))
         if not image_path.is_file():
             raise RuntimeError(f"Public upstream example image not found: {image_path}")
 
         # This is the canonical implementation from LiteReality-Agent at the pinned SHA.
-        from litereality_agent.models.trellis.inference import load_pipeline, generate
+        from litereality_agent.models.trellis.inference import (
+            generate,
+            load_pipeline,
+            prepare_local_model,
+        )
+        from litereality_agent.models.runtime_env import LOCAL_MODEL_DIR
 
-        pipeline = load_pipeline(MODEL_ID, skip_rembg=True)
-        if hasattr(pipeline, "low_vram") and not pipeline.low_vram:
+        pipeline = load_pipeline(
+            prepare_local_model(MODEL_ID),
+            skip_rembg=True,
+        )
+        local_model = LOCAL_MODEL_DIR
+        if not getattr(pipeline, "low_vram", False):
             raise RuntimeError("LiteReality TRELLIS.2 pipeline did not enter low-VRAM mode")
+        report["low_vram_mode"] = bool(pipeline.low_vram)
+        report["gpu_target_verified"] = True
         generate(
             pipeline,
             image_path,
@@ -181,6 +216,9 @@ def run() -> tuple[Path, Path]:
                     "model_sha256": DINOV3_SHA256,
                     "license_file": str(dino_dir / "LICENSE.md"),
                 },
+                "model_snapshot_revision": Path(
+                    Path(local_model).joinpath("ckpts").resolve().parent
+                ).name,
                 "output": {
                     "file": glb_path.name,
                     "size_bytes": glb_path.stat().st_size,
